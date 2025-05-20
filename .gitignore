@@ -18,6 +18,7 @@ build/portable-net46+win8+wpa81/obj/
 lib/Debug/
 lib/Release/
 .vs/
+.idea/
 build/Android/obj/
 build/TVOS/obj/
 build/WatchOS/obj/
