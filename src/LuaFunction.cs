@@ -1,8 +1,8 @@
 ﻿using System;
-using KeraLua;
+using NLua.LuaNetCompat;
 
-using LuaState = KeraLua.Lua;
-using LuaNativeFunction = KeraLua.LuaFunction;
+using LuaState = NLua.LuaNetCompat.Lua;
+using LuaNativeFunction = LuaNET.Lua51.Lua.lua_CFunction;
 
 namespace NLua
 {
@@ -10,12 +10,12 @@ namespace NLua
     {
         internal readonly LuaNativeFunction function;
 
-        public LuaFunction(int reference, Lua interpreter):base(reference, interpreter)
+        public LuaFunction(int reference, Lua interpreter) : base(reference, interpreter)
         {
             function = null;
         }
 
-        public LuaFunction(LuaNativeFunction nativeFunction, Lua interpreter):base (0, interpreter)
+        public LuaFunction(LuaNativeFunction nativeFunction, Lua interpreter) : base(0, interpreter)
         {
             function = nativeFunction;
         }

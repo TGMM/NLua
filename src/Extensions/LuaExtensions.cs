@@ -1,8 +1,9 @@
 ﻿
 using System;
 using System.Runtime.InteropServices;
-using KeraLua;
-using LuaState=KeraLua.Lua;
+using NLua.LuaNetCompat;
+using static NLua.LuaNetCompat.Lua;
+using LuaState = NLua.LuaNetCompat.Lua;
 
 namespace NLua.Extensions
 {
@@ -22,23 +23,18 @@ namespace NLua.Extensions
 
         public static void PopGlobalTable(this LuaState luaState)
         {
-            luaState.RawSetInteger(LuaRegistry.Index, (long) LuaRegistryIndex.Globals);
+            luaState.RawSetInteger(LuaRegistry.Index, (long)LuaRegistryIndex.Globals);
         }
 
-        public static void GetRef (this LuaState luaState, int reference)
+        public static void GetRef(this LuaState luaState, int reference)
         {
             luaState.RawGetInteger(LuaRegistry.Index, reference);
         }
 
         // ReSharper disable once IdentifierTypo
-        public static void Unref (this LuaState luaState, int reference)
+        public static void Unref(this LuaState luaState, int reference)
         {
             luaState.Unref(LuaRegistry.Index, reference);
-        }
-
-        public static bool AreEqual(this LuaState luaState, int ref1, int ref2)
-        {
-            return luaState.Compare(ref1, ref2, LuaCompare.Equal);
         }
 
         public static IntPtr CheckUData(this LuaState state, int ud, string name)
@@ -59,7 +55,7 @@ namespace NLua.Extensions
                 return p;
 
             return IntPtr.Zero;
-        }       
+        }
 
         public static int ToNetObject(this LuaState state, int index, IntPtr tag)
         {
@@ -88,12 +84,6 @@ namespace NLua.Extensions
                 return Marshal.ReadInt32(userData);
 
             return -1;
-        }
-
-        public static void NewUData(this LuaState state, int val)
-        {
-            IntPtr pointer = state.NewUserData(Marshal.SizeOf(typeof(int)));
-            Marshal.WriteInt32(pointer, val);
         }
 
         public static int RawNetObj(this LuaState state, int index)

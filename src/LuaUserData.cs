@@ -4,20 +4,21 @@ using System.Collections;
 
 using NLua.Extensions;
 
-using LuaState = KeraLua.Lua;
+using LuaState = NLua.LuaNetCompat.Lua;
 
 namespace NLua
 {
     public class LuaUserData : LuaBase
     {
-        public LuaUserData(int reference, Lua interpreter):base(reference, interpreter)
+        public LuaUserData(int reference, Lua interpreter) : base(reference, interpreter)
         {
         }
 
         /*
          * Indexer for string fields of the userdata
          */
-        public object this[string field] {
+        public object this[string field]
+        {
             get
             {
                 Lua lua;
@@ -39,7 +40,8 @@ namespace NLua
         /*
          * Indexer for numeric fields of the userdata
          */
-        public object this[object field] {
+        public object this[object field]
+        {
             get
             {
                 Lua lua;

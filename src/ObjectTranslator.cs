@@ -4,7 +4,8 @@ using System.Reflection;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
 using System.Runtime.InteropServices;
-using KeraLua;
+using NLua.LuaNetCompat;
+using static NLua.LuaNetCompat.Lua;
 
 using NLua.Method;
 using NLua.Exceptions;
@@ -14,8 +15,8 @@ using NLua.Extensions;
     using ObjCRuntime;
 #endif
 
-using LuaState = KeraLua.Lua;
-using LuaNativeFunction = KeraLua.LuaFunction;
+using LuaState = NLua.LuaNetCompat.Lua;
+using LuaNativeFunction = LuaNET.Lua51.Lua.lua_CFunction;
 using System.Runtime.CompilerServices;
 
 namespace NLua
@@ -224,7 +225,7 @@ namespace NLua
             if (message != null)
             {
                 // Wrap Lua error (just a string) and store the error location
-                if (interpreter?.UseTraceback is true) 
+                if (interpreter?.UseTraceback is true)
                     message += Environment.NewLine + interpreter.GetDebugTraceback();
                 e = new LuaScriptException(message, errLocation);
             }
@@ -604,7 +605,7 @@ namespace NLua
                 klass = (ProxyType)_objects[udata];
 
             if (klass == null)
-            { 
+            {
                 ThrowError(luaState, "get_constructor_bysig: first arg is invalid type reference");
                 return 1;
             }
@@ -735,7 +736,6 @@ namespace NLua
             // Stores the object index in the Lua list and pushes the
             // index into the Lua stack
             luaState.GetMetaTable("luaNet_objects");
-            luaState.NewUData(index);
             luaState.PushCopy(-3);
             luaState.Remove(-4);
             luaState.SetMetaTable(-2);
@@ -877,13 +877,13 @@ namespace NLua
                         return luaState.ToNumber(index);
                     }
                 case LuaType.String:
-                        return luaState.ToString(index, false);
+                    return luaState.ToString(index, false);
                 case LuaType.Boolean:
-                        return luaState.ToBoolean(index);
+                    return luaState.ToBoolean(index);
                 case LuaType.Table:
-                        return GetTable(luaState, index);
+                    return GetTable(luaState, index);
                 case LuaType.Function:
-                        return GetFunction(luaState, index);
+                    return GetFunction(luaState, index);
                 case LuaType.UserData:
                     {
                         int udata = luaState.ToNetObject(index, Tag);
@@ -1048,9 +1048,9 @@ namespace NLua
                 luaState.PushNil();
             else if (o is sbyte sb)
                 luaState.PushInteger(sb);
-            else if(o is byte bt)
+            else if (o is byte bt)
                 luaState.PushInteger(bt);
-            else if(o is short s)
+            else if (o is short s)
                 luaState.PushInteger(s);
             else if (o is ushort us)
                 luaState.PushInteger(us);
@@ -1066,9 +1066,9 @@ namespace NLua
                 luaState.PushInteger(ch);
             else if (o is float fl)
                 luaState.PushNumber(fl);
-            else if(o is decimal dc)
+            else if (o is decimal dc)
                 luaState.PushNumber((double)dc);
-            else if(o is double db)
+            else if (o is double db)
                 luaState.PushNumber(db);
             else if (o is string str)
                 luaState.PushString(str);
@@ -1157,7 +1157,7 @@ namespace NLua
 
         int CTypeInternal(LuaState luaState)
         {
-            Type t = TypeOf(luaState,1);
+            Type t = TypeOf(luaState, 1);
             if (t == null)
                 return PushError(luaState, "Not a CLR Class");
 

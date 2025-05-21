@@ -1,10 +1,6 @@
 ﻿
 using System;
-using System.Collections;
-
-using NLua.Extensions;
-
-using LuaState = KeraLua.Lua;
+using LuaState = NLua.LuaNetCompat.Lua;
 
 namespace NLua
 {
@@ -32,23 +28,10 @@ namespace NLua
             }
         }
 
-        public LuaThread(int reference, Lua interpreter): base(reference, interpreter)
+        public LuaThread(int reference, Lua interpreter) : base(reference, interpreter)
         {
             _luaState = interpreter.GetThreadState(reference);
             _translator = interpreter.Translator;
-        }
-
-        /*
-         * Resets this thread, cleaning its call stack and closing all pending to-be-closed variables.
-         */
-        public int Reset()
-        {
-            int oldTop = _luaState.GetTop();
-
-            int statusCode = _luaState.ResetThread();  /* close its tbc variables */
-
-            _luaState.SetTop(oldTop);
-            return statusCode;
         }
 
         public void XMove(LuaState to, object val, int index = 1)

@@ -6,8 +6,8 @@ using System.Linq;
 using NLua.Exceptions;
 using NLua.Extensions;
 
-using LuaState = KeraLua.Lua;
-using LuaNativeFunction = KeraLua.LuaFunction;
+using LuaState = NLua.LuaNetCompat.Lua;
+using LuaNativeFunction = LuaNET.Lua51.Lua.lua_CFunction;
 
 namespace NLua.Method
 {
@@ -67,7 +67,7 @@ namespace NLua.Method
             _lastCalledMethod = new MethodCache();
 
             _isStatic = (bindingType & BindingFlags.Static) == BindingFlags.Static;
-            MethodInfo [] methods = GetMethodsRecursively(targetType.UnderlyingSystemType,
+            MethodInfo[] methods = GetMethodsRecursively(targetType.UnderlyingSystemType,
                 methodName,
                 bindingType | BindingFlags.Public);
             _members = ReorderMethods(methods);
@@ -111,7 +111,7 @@ namespace NLua.Method
         {
             object[] args = _lastCalledMethod.args;
 
-                        
+
             for (int i = 0; i < _lastCalledMethod.argTypes.Length; i++)
             {
                 MethodArgs type = _lastCalledMethod.argTypes[i];
@@ -128,10 +128,10 @@ namespace NLua.Method
                 else
                 {
                     args[type.Index] = type.ExtractValue(luaState, index);
-            }
+                }
 
-            if (_lastCalledMethod.args[_lastCalledMethod.argTypes[i].Index] == null &&
-                    !luaState.IsNil(i + 1 + numStackToSkip))
+                if (_lastCalledMethod.args[_lastCalledMethod.argTypes[i].Index] == null &&
+                        !luaState.IsNil(i + 1 + numStackToSkip))
                     throw new LuaException(string.Format("Argument number {0} is invalid", (i + 1)));
             }
         }
@@ -176,7 +176,7 @@ namespace NLua.Method
             {
                 // Failure of method invocation
                 Lua interpreter = _translator.Interpreter;
-                if (interpreter?.UseTraceback is true) 
+                if (interpreter?.UseTraceback is true)
                     e.GetBaseException().Data["Traceback"] = interpreter.GetDebugTraceback();
                 return SetPendingException(e.GetBaseException());
             }
@@ -332,7 +332,7 @@ namespace NLua.Method
 
             MethodBase methodToCall = _method;
             object targetObject = _target;
-        
+
             if (!luaState.CheckStack(5))
                 throw new LuaException("Lua stack overflow");
 
@@ -341,7 +341,7 @@ namespace NLua.Method
             // Method from name
             if (methodToCall == null)
                 return CallMethodFromName(luaState);
-            
+
             // Method from MethodBase instance
             if (!methodToCall.ContainsGenericParameters)
             {
@@ -351,7 +351,7 @@ namespace NLua.Method
                     luaState.Remove(1); // Pops the receiver
                 }
 
-                if (!_translator.MatchParameters(luaState, methodToCall,  _lastCalledMethod, 0))
+                if (!_translator.MatchParameters(luaState, methodToCall, _lastCalledMethod, 0))
                 {
                     _translator.ThrowError(luaState, "Invalid arguments to method call");
                     return 1;
@@ -368,7 +368,7 @@ namespace NLua.Method
 
                 _translator.MatchParameters(luaState, methodToCall, _lastCalledMethod, 0);
 
-                return CallInvokeOnGenericMethod(luaState, (MethodInfo) methodToCall, targetObject);
+                return CallInvokeOnGenericMethod(luaState, (MethodInfo)methodToCall, targetObject);
             }
 
             if (_isStatic)

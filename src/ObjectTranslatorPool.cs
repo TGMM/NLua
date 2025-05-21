@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using NLua.Exceptions;
-using LuaState = KeraLua.Lua;
+using LuaState = NLua.LuaNetCompat.Lua;
 
 namespace NLua
 {

@@ -1,5 +1,5 @@
 using System;
-using KeraLua;
+using LuaDebug = LuaNET.Lua51.Lua.lua_Debug;
 
 namespace NLua.Event
 {

@@ -1,5 +1,5 @@
 using System;
-using LuaState = KeraLua.Lua;
+using LuaState = NLua.LuaNetCompat.Lua;
 
 namespace NLua
 {

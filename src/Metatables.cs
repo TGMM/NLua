@@ -1,12 +1,10 @@
 ﻿using System;
 using System.Linq;
-using System.Collections;
 using System.Reflection;
 using System.Diagnostics;
 using System.Collections.Generic;
-using System.Runtime.InteropServices;
 
-using KeraLua;
+using static NLua.LuaNetCompat.Lua;
 
 using NLua.Method;
 using NLua.Extensions;
@@ -15,8 +13,8 @@ using NLua.Extensions;
     using ObjCRuntime;
 #endif
 
-using LuaState = KeraLua.Lua;
-using LuaNativeFunction = KeraLua.LuaFunction;
+using LuaState = NLua.LuaNetCompat.Lua;
+using LuaNativeFunction = LuaNET.Lua51.Lua.lua_CFunction;
 using NLua.Exceptions;
 
 namespace NLua
@@ -24,13 +22,13 @@ namespace NLua
     public class MetaFunctions
     {
         public static readonly LuaNativeFunction GcFunction = CollectObject;
-        public static readonly LuaNativeFunction IndexFunction  = GetMethod;
+        public static readonly LuaNativeFunction IndexFunction = GetMethod;
         public static readonly LuaNativeFunction NewIndexFunction = SetFieldOrProperty;
-        public static readonly LuaNativeFunction BaseIndexFunction  = GetBaseMethod;
-        public static readonly LuaNativeFunction ClassIndexFunction  = GetClassMethod;
-        public static readonly LuaNativeFunction ClassNewIndexFunction  = SetClassFieldOrProperty;
-        public static readonly LuaNativeFunction ExecuteDelegateFunction  = RunFunctionDelegate;
-        public static readonly LuaNativeFunction CallConstructorFunction  = CallConstructor;
+        public static readonly LuaNativeFunction BaseIndexFunction = GetBaseMethod;
+        public static readonly LuaNativeFunction ClassIndexFunction = GetClassMethod;
+        public static readonly LuaNativeFunction ClassNewIndexFunction = SetClassFieldOrProperty;
+        public static readonly LuaNativeFunction ExecuteDelegateFunction = RunFunctionDelegate;
+        public static readonly LuaNativeFunction CallConstructorFunction = CallConstructor;
         public static readonly LuaNativeFunction ToStringFunction = ToStringLua;
         public static readonly LuaNativeFunction CallDelegateFunction = CallDelegate;
 
@@ -41,7 +39,7 @@ namespace NLua
         public static readonly LuaNativeFunction ModulosFunction = ModLua;
         public static readonly LuaNativeFunction UnaryNegationFunction = UnaryNegationLua;
         public static readonly LuaNativeFunction EqualFunction = EqualLua;
-        public static readonly LuaNativeFunction LessThanFunction  = LessThanLua;
+        public static readonly LuaNativeFunction LessThanFunction = LessThanLua;
         public static readonly LuaNativeFunction LessThanOrEqualFunction = LessThanOrEqualLua;
 
         readonly Dictionary<object, Dictionary<object, object>> _memberCache = new Dictionary<object, Dictionary<object, object>>();
@@ -51,31 +49,31 @@ namespace NLua
          * __index metafunction for CLR objects. Implemented in Lua.
          */
         public const string LuaIndexFunction = @"local a={}local function b(c,d)local e=getmetatable(c)local f=e.cache[d]if f~=nil then if f==a then return nil end;return f else local g,h=get_object_member(c,d)if h then if g==nil then e.cache[d]=a else e.cache[d]=g end end;return g end end;return b";
-            //@"local fakenil = {}
-            //  local function index(obj, name)
-            //      local meta = getmetatable(obj)
-            //      local cached = meta.cache[name]
-              
-            //      if cached ~= nil then
-            //          if cached == fakenil then
-            //              return nil
-            //          end
-            //          return cached
-              
-            //      else
-            //          local value, isCached = get_object_member(obj, name)
-            //          if isCached then
-            //              if value == nil then
-            //                  meta.cache[name] = fakenil
-            //              else
-            //                  meta.cache[name] = value
-            //              end
-            //          end
-            //          return value
-            //      end
-            //  end
-              
-            //  return index";
+        //@"local fakenil = {}
+        //  local function index(obj, name)
+        //      local meta = getmetatable(obj)
+        //      local cached = meta.cache[name]
+
+        //      if cached ~= nil then
+        //          if cached == fakenil then
+        //              return nil
+        //          end
+        //          return cached
+
+        //      else
+        //          local value, isCached = get_object_member(obj, name)
+        //          if isCached then
+        //              if value == nil then
+        //                  meta.cache[name] = fakenil
+        //              else
+        //                  meta.cache[name] = value
+        //              end
+        //          end
+        //          return value
+        //      end
+        //  end
+
+        //  return index";
 
         public MetaFunctions(ObjectTranslator translator)
         {
@@ -105,7 +103,7 @@ namespace NLua
             if (exception != null)
                 return state.Error();
             return result;
-         }
+        }
 
         /*
          * __gc metafunction of CLR objects.
@@ -298,7 +296,7 @@ namespace NLua
                 translator.ThrowError(luaState, "Cannot negate object (" + type.Name + " does not overload the operator -)");
                 return 1;
             }
-            obj1 = opUnaryNegation.Invoke(obj1, new [] { obj1 });
+            obj1 = opUnaryNegation.Invoke(obj1, new[] { obj1 });
             translator.Push(luaState, obj1);
             return 1;
         }
@@ -384,7 +382,7 @@ namespace NLua
                 if (type == LuaType.UserData)
                 {
                     object obj = translator.GetRawNetObject(luaState, i);
-                    
+
                     strrep = obj == null ? "(null)" : obj.ToString();
                 }
 
@@ -656,7 +654,7 @@ namespace NLua
         }
 
 
-        private int TryIndexMethods(LuaState luaState, MethodInfo [] methods, object obj)
+        private int TryIndexMethods(LuaState luaState, MethodInfo[] methods, object obj)
         {
             foreach (MethodInfo methodInfo in methods)
             {
@@ -1244,7 +1242,7 @@ namespace NLua
                 _translator.ThrowError(luaState, "Trying to index an invalid type reference");
                 return 1;
             }
-            
+
             if (luaState.IsNumber(2))
             {
                 int size = (int)luaState.ToNumber(2);
@@ -1574,7 +1572,7 @@ namespace NLua
                     argTypes.Add(methodArg);
                     continue;
                 }
-                
+
                 if (currentLuaParam > nLuaParams)
                 {   // Adds optional parameters
                     if (!currentNetParam.IsOptional)
@@ -1612,7 +1610,7 @@ namespace NLua
 
             if (currentLuaParam != nLuaParams + 1) // Number of parameters does not match
                 return false;
-            
+
             methodCache.args = paramList.ToArray();
             methodCache.cachedMethod = method;
             methodCache.outList = outList.ToArray();
@@ -1644,7 +1642,7 @@ namespace NLua
 
             bool isParamArray = nLuaParams < currentLuaParam;
 
-            LuaType  luaType = luaState.Type(currentLuaParam);
+            LuaType luaType = luaState.Type(currentLuaParam);
 
             if (luaType == LuaType.Table)
             {

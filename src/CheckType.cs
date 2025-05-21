@@ -1,12 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
-using KeraLua;
+using static NLua.LuaNetCompat.Lua;
 using NLua.Method;
 using NLua.Extensions;
 
 namespace NLua
 {
-    using LuaState = KeraLua.Lua;
+    using LuaState = NLua.LuaNetCompat.Lua;
     sealed class CheckType
     {
         readonly Dictionary<Type, ExtractValue> _extractValues = new Dictionary<Type, ExtractValue>();
@@ -347,7 +347,7 @@ namespace NLua
             if (!luaState.IsString(stackPos))
                 return null;
 
-            byte [] retVal = luaState.ToBuffer(stackPos, false);
+            byte[] retVal = luaState.ToBuffer(stackPos, false);
             return retVal;
         }
 
@@ -357,7 +357,7 @@ namespace NLua
                 return null;
             return luaState.ToString(stackPos, false);
         }
-        
+
         private object GetAsTable(LuaState luaState, int stackPos)
         {
             return _translator.GetTable(luaState, stackPos);
