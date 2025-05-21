@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 
+using LuaNativeFunction = LuaNET.Lua51.Lua.lua_CFunction;
+
 namespace NLua
 {
     public class LuaGlobalEntry
@@ -100,7 +102,7 @@ namespace NLua
         private void RegisterPath(string path, Type type, int recursionCounter, LuaGlobalEntry entry = null)
         {
             // If the type is a global method, list it directly
-            if (type == typeof(KeraLua.LuaFunction))
+            if (type == typeof(LuaNativeFunction))
             {
                 RegisterLuaFunction(path, entry);
             }
