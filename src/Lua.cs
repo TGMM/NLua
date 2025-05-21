@@ -63,155 +63,155 @@ namespace NLua
 
         // The commented code bellow is the initLua, the code assigned here is minified for size/performance reasons.
         private const string InitLuanet = @"local a={}local rawget=rawget;local b=luanet.import_type;local c=luanet.load_assembly;luanet.error,luanet.type=error,type;function a:__index(d)local e=rawget(self,'.fqn')e=(e and e..'.'or'')..d;local f=rawget(luanet,d)or b(e)if f==nil then pcall(c,e)f={['.fqn']=e}setmetatable(f,a)end;rawset(self,d,f)return f end;function a:__call(...)error('No such type: '..rawget(self,'.fqn'),2)end;luanet['.fqn']=false;setmetatable(luanet,a)luanet.load_assembly('mscorlib')";
- //@"local metatable = {}
- //       local rawget = rawget
- //       local import_type = luanet.import_type
- //       local load_assembly = luanet.load_assembly
- //       luanet.error, luanet.type = error, type
- //       -- Lookup a .NET identifier component.
- //       function metatable:__index(key) -- key is e.g. 'Form'
- //           -- Get the fully-qualified name, e.g. 'System.Windows.Forms.Form'
- //           local fqn = rawget(self,'.fqn')
- //           fqn = ((fqn and fqn .. '.') or '') .. key
+        //@"local metatable = {}
+        //       local rawget = rawget
+        //       local import_type = luanet.import_type
+        //       local load_assembly = luanet.load_assembly
+        //       luanet.error, luanet.type = error, type
+        //       -- Lookup a .NET identifier component.
+        //       function metatable:__index(key) -- key is e.g. 'Form'
+        //           -- Get the fully-qualified name, e.g. 'System.Windows.Forms.Form'
+        //           local fqn = rawget(self,'.fqn')
+        //           fqn = ((fqn and fqn .. '.') or '') .. key
 
- //           -- Try to find either a luanet function or a CLR type
- //           local obj = rawget(luanet,key) or import_type(fqn)
+        //           -- Try to find either a luanet function or a CLR type
+        //           local obj = rawget(luanet,key) or import_type(fqn)
 
- //           -- If key is neither a luanet function or a CLR type, then it is simply
- //           -- an identifier component.
- //           if obj == nil then
- //               -- It might be an assembly, so we load it too.
- //               pcall(load_assembly,fqn)
- //               obj = { ['.fqn'] = fqn }
- //               setmetatable(obj, metatable)
- //           end
+        //           -- If key is neither a luanet function or a CLR type, then it is simply
+        //           -- an identifier component.
+        //           if obj == nil then
+        //               -- It might be an assembly, so we load it too.
+        //               pcall(load_assembly,fqn)
+        //               obj = { ['.fqn'] = fqn }
+        //               setmetatable(obj, metatable)
+        //           end
 
- //           -- Cache this lookup
- //           rawset(self, key, obj)
- //           return obj
- //       end
+        //           -- Cache this lookup
+        //           rawset(self, key, obj)
+        //           return obj
+        //       end
 
- //       -- A non-type has been called; e.g. foo = System.Foo()
- //       function metatable:__call(...)
- //           error('No such type: ' .. rawget(self,'.fqn'), 2)
- //       end
+        //       -- A non-type has been called; e.g. foo = System.Foo()
+        //       function metatable:__call(...)
+        //           error('No such type: ' .. rawget(self,'.fqn'), 2)
+        //       end
 
- //       -- This is the root of the .NET namespace
- //       luanet['.fqn'] = false
- //       setmetatable(luanet, metatable)
+        //       -- This is the root of the .NET namespace
+        //       luanet['.fqn'] = false
+        //       setmetatable(luanet, metatable)
 
- //       -- Preload the mscorlib assembly
- //       luanet.load_assembly('mscorlib')";
+        //       -- Preload the mscorlib assembly
+        //       luanet.load_assembly('mscorlib')";
 
- private const string ClrPackage = @"if not luanet then require'luanet'end;local a,b=luanet.import_type,luanet.load_assembly;local c={__index=function(d,e)local f=rawget(d,e)if f==nil then f=a(d.packageName.."".""..e)if f==nil then f=a(e)end;d[e]=f end;return f end}function luanet.namespace(g)if type(g)=='table'then local h={}for i=1,#g do h[i]=luanet.namespace(g[i])end;return unpack(h)end;local j={packageName=g}setmetatable(j,c)return j end;local k,l;local function m()l={}k={__index=function(n,e)for i,d in ipairs(l)do local f=d[e]if f then _G[e]=f;return f end end end}setmetatable(_G,k)end;function CLRPackage(o,p)p=p or o;local q=pcall(b,o)return luanet.namespace(p)end;function import(o,p)if not k then m()end;if not p then local i=o:find('%.dll$')if i then p=o:sub(1,i-1)else p=o end end;local j=CLRPackage(o,p)table.insert(l,j)return j end;function luanet.make_array(r,s)local t=r[#s]for i,u in ipairs(s)do t:SetValue(u,i-1)end;return t end;function luanet.each(v)local w=v:GetEnumerator()return function()if w:MoveNext()then return w.Current end end end";
-//@"---
-//--- This lua module provides auto importing of .net classes into a named package.
-//--- Makes for super easy use of LuaInterface glue
-//---
-//--- example:
-//---   Threading = CLRPackage(""System"", ""System.Threading"")
-//---   Threading.Thread.Sleep(100)
-//---
-//--- Extensions:
-//--- import() is a version of CLRPackage() which puts the package into a list which is used by a global __index lookup,
-//--- and thus works rather like C#'s using statement. It also recognizes the case where one is importing a local
-//--- assembly, which must end with an explicit .dll extension.
+        private const string ClrPackage = @"if not luanet then require'luanet'end;local a,b=luanet.import_type,luanet.load_assembly;local c={__index=function(d,e)local f=rawget(d,e)if f==nil then f=a(d.packageName.."".""..e)if f==nil then f=a(e)end;d[e]=f end;return f end}function luanet.namespace(g)if type(g)=='table'then local h={}for i=1,#g do h[i]=luanet.namespace(g[i])end;return unpack(h)end;local j={packageName=g}setmetatable(j,c)return j end;local k,l;local function m()l={}k={__index=function(n,e)for i,d in ipairs(l)do local f=d[e]if f then _G[e]=f;return f end end end}setmetatable(_G,k)end;function CLRPackage(o,p)p=p or o;local q=pcall(b,o)return luanet.namespace(p)end;function import(o,p)if not k then m()end;if not p then local i=o:find('%.dll$')if i then p=o:sub(1,i-1)else p=o end end;local j=CLRPackage(o,p)table.insert(l,j)return j end;function luanet.make_array(r,s)local t=r[#s]for i,u in ipairs(s)do t:SetValue(u,i-1)end;return t end;function luanet.each(v)local w=v:GetEnumerator()return function()if w:MoveNext()then return w.Current end end end";
+        //@"---
+        //--- This lua module provides auto importing of .net classes into a named package.
+        //--- Makes for super easy use of LuaInterface glue
+        //---
+        //--- example:
+        //---   Threading = CLRPackage(""System"", ""System.Threading"")
+        //---   Threading.Thread.Sleep(100)
+        //---
+        //--- Extensions:
+        //--- import() is a version of CLRPackage() which puts the package into a list which is used by a global __index lookup,
+        //--- and thus works rather like C#'s using statement. It also recognizes the case where one is importing a local
+        //--- assembly, which must end with an explicit .dll extension.
 
-//--- Alternatively, luanet.namespace can be used for convenience without polluting the global namespace:
-//---   local sys,sysi = luanet.namespace {'System','System.IO'}
-//--    sys.Console.WriteLine(""we are at {0}"",sysi.Directory.GetCurrentDirectory())
-
-
-//-- LuaInterface hosted with stock Lua interpreter will need to explicitly require this...
-//if not luanet then require 'luanet' end
-
-//local import_type, load_assembly = luanet.import_type, luanet.load_assembly
-
-//local mt = {
-//    --- Lookup a previously unfound class and add it to our table
-//    __index = function(package, classname)
-//        local class = rawget(package, classname)
-//        if class == nil then
-//            class = import_type(package.packageName .. ""."" .. classname)
-//            if class == nil then class = import_type(classname) end
-//            package[classname] = class		-- keep what we found around, so it will be shared
-//        end
-//        return class
-//    end
-//}
-
-//function luanet.namespace(ns)
-//    if type(ns) == 'table' then
-//        local res = {}
-//        for i = 1,#ns do
-//            res[i] = luanet.namespace(ns[i])
-//        end
-//        return unpack(res)
-//    end
-//    -- FIXME - table.packageName could instead be a private index (see Lua 13.4.4)
-//    local t = { packageName = ns }
-//    setmetatable(t,mt)
-//    return t
-//end
-
-//local globalMT, packages
-
-//local function set_global_mt()
-//    packages = {}
-//    globalMT = {
-//        __index = function(T,classname)
-//                for i,package in ipairs(packages) do
-//                    local class = package[classname]
-//                    if class then
-//                        _G[classname] = class
-//                        return class
-//                    end
-//                end
-//        end
-//    }
-//    setmetatable(_G, globalMT)
-//end
-
-//--- Create a new Package class
-//function CLRPackage(assemblyName, packageName)
-//  -- a sensible default...
-//  packageName = packageName or assemblyName
-//  local ok = pcall(load_assembly,assemblyName)			-- Make sure our assembly is loaded
-//  return luanet.namespace(packageName)
-//end
-
-//function import (assemblyName, packageName)
-//    if not globalMT then
-//        set_global_mt()
-//    end
-//    if not packageName then
-//        local i = assemblyName:find('%.dll$')
-//        if i then packageName = assemblyName:sub(1,i-1)
-//        else packageName = assemblyName end
-//    end
-//    local t = CLRPackage(assemblyName,packageName)
-//    table.insert(packages,t)
-//    return t
-//end
+        //--- Alternatively, luanet.namespace can be used for convenience without polluting the global namespace:
+        //---   local sys,sysi = luanet.namespace {'System','System.IO'}
+        //--    sys.Console.WriteLine(""we are at {0}"",sysi.Directory.GetCurrentDirectory())
 
 
-//function luanet.make_array (tp,tbl)
-//    local arr = tp[#tbl]
-//    for i,v in ipairs(tbl) do
-//        arr:SetValue(v,i-1)
-//    end
-//    return arr
-//end
+        //-- LuaInterface hosted with stock Lua interpreter will need to explicitly require this...
+        //if not luanet then require 'luanet' end
 
-//function luanet.each(o)
-//   local e = o:GetEnumerator()
-//   return function()
-//      if e:MoveNext() then
-//        return e.Current
-//     end
-//   end
-//end
-//";
+        //local import_type, load_assembly = luanet.import_type, luanet.load_assembly
+
+        //local mt = {
+        //    --- Lookup a previously unfound class and add it to our table
+        //    __index = function(package, classname)
+        //        local class = rawget(package, classname)
+        //        if class == nil then
+        //            class = import_type(package.packageName .. ""."" .. classname)
+        //            if class == nil then class = import_type(classname) end
+        //            package[classname] = class		-- keep what we found around, so it will be shared
+        //        end
+        //        return class
+        //    end
+        //}
+
+        //function luanet.namespace(ns)
+        //    if type(ns) == 'table' then
+        //        local res = {}
+        //        for i = 1,#ns do
+        //            res[i] = luanet.namespace(ns[i])
+        //        end
+        //        return unpack(res)
+        //    end
+        //    -- FIXME - table.packageName could instead be a private index (see Lua 13.4.4)
+        //    local t = { packageName = ns }
+        //    setmetatable(t,mt)
+        //    return t
+        //end
+
+        //local globalMT, packages
+
+        //local function set_global_mt()
+        //    packages = {}
+        //    globalMT = {
+        //        __index = function(T,classname)
+        //                for i,package in ipairs(packages) do
+        //                    local class = package[classname]
+        //                    if class then
+        //                        _G[classname] = class
+        //                        return class
+        //                    end
+        //                end
+        //        end
+        //    }
+        //    setmetatable(_G, globalMT)
+        //end
+
+        //--- Create a new Package class
+        //function CLRPackage(assemblyName, packageName)
+        //  -- a sensible default...
+        //  packageName = packageName or assemblyName
+        //  local ok = pcall(load_assembly,assemblyName)			-- Make sure our assembly is loaded
+        //  return luanet.namespace(packageName)
+        //end
+
+        //function import (assemblyName, packageName)
+        //    if not globalMT then
+        //        set_global_mt()
+        //    end
+        //    if not packageName then
+        //        local i = assemblyName:find('%.dll$')
+        //        if i then packageName = assemblyName:sub(1,i-1)
+        //        else packageName = assemblyName end
+        //    end
+        //    local t = CLRPackage(assemblyName,packageName)
+        //    table.insert(packages,t)
+        //    return t
+        //end
+
+
+        //function luanet.make_array (tp,tbl)
+        //    local arr = tp[#tbl]
+        //    for i,v in ipairs(tbl) do
+        //        arr:SetValue(v,i-1)
+        //    end
+        //    return arr
+        //end
+
+        //function luanet.each(o)
+        //   local e = o:GetEnumerator()
+        //   return function()
+        //      if e:MoveNext() then
+        //        return e.Current
+        //     end
+        //   end
+        //end
+        //";
         public bool UseTraceback { get; set; } = false;
 
         /// <summary>
@@ -234,7 +234,8 @@ namespace NLua
         /// An alphabetically sorted list of all globals (objects, methods, etc.) externally added to this Lua instance
         /// </summary>
         /// <remarks>Members of globals are also listed. The formatting is optimized for text input auto-completion.</remarks>
-        public IEnumerable<string> Globals {
+        public IEnumerable<string> Globals
+        {
             get
             {
                 return _globals.Globals;
@@ -578,7 +579,7 @@ namespace NLua
                 if (_luaState.PCall(0, -1, errorFunctionIndex) != LuaStatus.OK)
                     ThrowExceptionFromError(oldTop);
 
-                 return _translator.PopValues(_luaState, oldTop);
+                return _translator.PopValues(_luaState, oldTop);
             }
             finally
             {
@@ -643,7 +644,8 @@ namespace NLua
             * Indexer for global variables from the LuaInterpreter
             * Supports navigation of tables by using . operator
             */
-        public object this[string fullPath] {
+        public object this[string fullPath]
+        {
             get
             {
                 // Silently convert Lua integer to double for backward compatibility with index[] operator
@@ -765,7 +767,7 @@ namespace NLua
             if (luaFunction != null)
                 return luaFunction;
 
-            luaFunction = new LuaFunction((LuaNativeFunction) obj, this);
+            luaFunction = new LuaFunction((LuaNativeFunction)obj, this);
             return luaFunction;
         }
 
@@ -904,7 +906,7 @@ namespace NLua
                 _luaState.SetTable(-3);
             }
 
-            _luaState.SetTop( oldTop);
+            _luaState.SetTop(oldTop);
         }
 
         public Dictionary<object, object> GetTableDict(LuaTable table)
@@ -1339,12 +1341,12 @@ namespace NLua
             // We leave nothing on the stack when we are done
             int oldTop = _luaState.GetTop();
             var wrapper = new LuaMethodWrapper(_translator, target, new ProxyType(function.DeclaringType), function);
-            
+
             _translator.Push(_luaState, new LuaNativeFunction(wrapper.InvokeFunction));
-            
+
             object value = _translator.GetObject(_luaState, -1);
             SetObjectToPath(path, value);
-            
+
             LuaFunction f = GetFunction(path);
             _luaState.SetTop(oldTop);
             return f;

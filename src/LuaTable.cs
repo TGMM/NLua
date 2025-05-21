@@ -10,14 +10,15 @@ namespace NLua
 {
     public class LuaTable : LuaBase
     {
-        public LuaTable(int reference, Lua interpreter): base(reference, interpreter)
+        public LuaTable(int reference, Lua interpreter) : base(reference, interpreter)
         {
         }
 
         /*
          * Indexer for string fields of the table
          */
-        public object this[string field] {
+        public object this[string field]
+        {
             get
             {
                 Lua lua;
@@ -37,7 +38,8 @@ namespace NLua
         /*
          * Indexer for numeric fields of the table
          */
-        public object this[object field] {
+        public object this[object field]
+        {
             get
             {
                 Lua lua;

@@ -197,7 +197,7 @@ namespace NLuaTest
                 lua.DoString("test:MethodOverload(test)");
                 lua.DoString("test:MethodOverload(1,1,1)");
                 lua.DoString("i = test:MethodOverload(2,2)\r\nprint(i)");
-                int i = (int) lua.GetNumber("i");
+                int i = (int)lua.GetNumber("i");
                 Assert.AreEqual(5, i, "#1");
 
                 lua.DoString("v = test:MethodOverload2(11)");
@@ -224,7 +224,7 @@ namespace NLuaTest
             }
 
             long endMem = System.Diagnostics.Process.GetCurrentProcess().WorkingSet64;
-            Console.WriteLine("Was using " + startingMem / 1024 / 1024 + "MB, now using: " + endMem  / 1024 / 1024 + "MB");
+            Console.WriteLine("Was using " + startingMem / 1024 / 1024 + "MB, now using: " + endMem / 1024 / 1024 + "MB");
         }
 
         [Test]
@@ -339,7 +339,7 @@ namespace NLuaTest
             {
                 lua.DoString("luanet.load_assembly('mscorlib')");
                 lua.DoString("luanet.load_assembly('NLuaTest', 'NLuaTest.TestTypes')");
-                lua.RegisterFunction("p", null, typeof(Console).GetMethod("WriteLine", new [] { typeof(string) }));
+                lua.RegisterFunction("p", null, typeof(Console).GetMethod("WriteLine", new[] { typeof(string) }));
                 lua.DoString("p('Foo')");
                 // Yet this works...
                 lua.DoString("string.gsub('some string', '(%w+)', function(s) p(s) end)");
@@ -403,7 +403,7 @@ namespace NLuaTest
             return val * val2;
         }
 
-        
+
 
         [Test]
         public void TestEventException()
@@ -1777,10 +1777,10 @@ namespace NLuaTest
         }
 
 
-       /*
-        * Tests passing a Lua table as an interface and
-        * accessing one of its value-type properties
-        */
+        /*
+         * Tests passing a Lua table as an interface and
+         * accessing one of its value-type properties
+         */
         [Test]
         public void NLuaValueProperty()
         {
@@ -2089,7 +2089,7 @@ namespace NLuaTest
             using (Lua lua = new Lua())
             {
                 lua.State.Encoding = Encoding.UTF8;
-                
+
                 lua.LoadCLRPackage();
                 lua.DoString("import('NLuaTest')");
                 lua.DoString("res = LuaTests.UnicodeString");
@@ -2421,7 +2421,7 @@ namespace NLuaTest
                 sw.Start();
                 try
                 {
-                    for(int i = 0; i < 10000; i++)
+                    for (int i = 0; i < 10000; i++)
                         lua.DoString($" v:Lengthx{i}() ");
                 }
                 catch (Exception e)
@@ -2797,7 +2797,7 @@ namespace NLuaTest
             {
                 lua.DoString("function F(a) return 2*a end");
                 function = lua.GetFunction("F");
-                table = lua.DoString("return { foo =\"Um dois tres\"}") [0] as LuaTable;
+                table = lua.DoString("return { foo =\"Um dois tres\"}")[0] as LuaTable;
             }
             Assert.IsNotNull(function);
             Assert.IsNotNull(table);
@@ -2857,8 +2857,8 @@ namespace NLuaTest
 
                 // The ratio two is very uncertain, lets use 5x, just to have some certain that 
                 // the gc collect the tables
-                Assert.True( ratio2 >= 1 , "#1:" + ratio2);
-                Assert.True( ratio <= 1,  "#2:" + ratio);
+                Assert.True(ratio2 >= 1, "#1:" + ratio2);
+                Assert.True(ratio <= 1, "#2:" + ratio);
             }
         }
 
@@ -2956,7 +2956,7 @@ namespace NLuaTest
                 Assert.AreEqual("value1", lua["i"], "#1");
                 Assert.AreEqual("value2", lua["j"], "#2");
 
-                IDictionary<string,object> obj2 = new Dictionary<string, object>()
+                IDictionary<string, object> obj2 = new Dictionary<string, object>()
                 {
                     { "key1" ,"value3" },
                     { "key2" ,"value4" }
@@ -3067,7 +3067,7 @@ namespace NLuaTest
             }
         }
 
-        private void WriteBinary(byte [] buffer)
+        private void WriteBinary(byte[] buffer)
         {
             byte[] expected = { 1, 2, 3, 0x3f, 0x40, 0xff, 0xf3, 0x9f };
             Assert.True(Enumerable.SequenceEqual(expected, buffer));
@@ -3104,7 +3104,7 @@ namespace NLuaTest
                 Console.WriteLine(e.ToString());
                 Assert.Fail();
             }
-             
+
             Assert.AreEqual(Enumeration.First, result, "#1");
         }
 
@@ -3175,7 +3175,7 @@ namespace NLuaTest
                 "       test:exceptionMethod() " +
                 "   end" +
                 "   err1, errMsg1 = pcall(callMethod);\n" +
-              //  "   err2, errMsg2 = pcall(callMethod);\n" +
+                //  "   err2, errMsg2 = pcall(callMethod);\n" +
                 "end ";
 
             //string script2 = "   err, errMsg = pcall(test.exceptionMethod,test);\n";
@@ -3232,11 +3232,11 @@ namespace NLuaTest
                 object o = lua.DoString(@" import ('mscorlib','System')
                               return Guid('adc70ae1-769e-4ace-aa83-928a604c5739')
                               ")[0];
-                
+
                 Assert.AreEqual(new Guid("adc70ae1-769e-4ace-aa83-928a604c5739"), o);
             }
         }
-        
+
         [TestCase(0)]
         [TestCase(1)]
         [TestCase(2)]
@@ -3245,15 +3245,15 @@ namespace NLuaTest
         {
             var tc = new TestClass();
             tc.LongValue = 5;
-            
+
             using (Lua lua = new Lua())
             {
                 lua.MaximumRecursion = maxRecursion;
                 lua.LoadCLRPackage();
                 lua["myTc"] = tc;
-                
-                if(maxRecursion == 0)
-                    Assert.AreEqual(1,lua.Globals.Count(), "#1"); //register only the root reference
+
+                if (maxRecursion == 0)
+                    Assert.AreEqual(1, lua.Globals.Count(), "#1"); //register only the root reference
                 else
                     Assert.IsTrue(lua.Globals.Count() > 1, "#1"); //many globals registered (all sub properties)
 

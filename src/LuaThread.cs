@@ -32,7 +32,7 @@ namespace NLua
             }
         }
 
-        public LuaThread(int reference, Lua interpreter): base(reference, interpreter)
+        public LuaThread(int reference, Lua interpreter) : base(reference, interpreter)
         {
             _luaState = interpreter.GetThreadState(reference);
             _translator = interpreter.Translator;

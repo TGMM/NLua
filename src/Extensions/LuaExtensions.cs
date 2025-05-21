@@ -2,7 +2,7 @@
 using System;
 using System.Runtime.InteropServices;
 using KeraLua;
-using LuaState=KeraLua.Lua;
+using LuaState = KeraLua.Lua;
 
 namespace NLua.Extensions
 {
@@ -22,16 +22,16 @@ namespace NLua.Extensions
 
         public static void PopGlobalTable(this LuaState luaState)
         {
-            luaState.RawSetInteger(LuaRegistry.Index, (long) LuaRegistryIndex.Globals);
+            luaState.RawSetInteger(LuaRegistry.Index, (long)LuaRegistryIndex.Globals);
         }
 
-        public static void GetRef (this LuaState luaState, int reference)
+        public static void GetRef(this LuaState luaState, int reference)
         {
             luaState.RawGetInteger(LuaRegistry.Index, reference);
         }
 
         // ReSharper disable once IdentifierTypo
-        public static void Unref (this LuaState luaState, int reference)
+        public static void Unref(this LuaState luaState, int reference)
         {
             luaState.Unref(LuaRegistry.Index, reference);
         }
@@ -59,7 +59,7 @@ namespace NLua.Extensions
                 return p;
 
             return IntPtr.Zero;
-        }       
+        }
 
         public static int ToNetObject(this LuaState state, int index, IntPtr tag)
         {

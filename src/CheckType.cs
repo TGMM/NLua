@@ -347,7 +347,7 @@ namespace NLua
             if (!luaState.IsString(stackPos))
                 return null;
 
-            byte [] retVal = luaState.ToBuffer(stackPos, false);
+            byte[] retVal = luaState.ToBuffer(stackPos, false);
             return retVal;
         }
 
@@ -357,7 +357,7 @@ namespace NLua
                 return null;
             return luaState.ToString(stackPos, false);
         }
-        
+
         private object GetAsTable(LuaState luaState, int stackPos)
         {
             return _translator.GetTable(luaState, stackPos);
