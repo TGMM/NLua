@@ -8,6 +8,7 @@ using NLua.Extensions;
 
 using LuaState = NLua.LuaNetCompat.Lua;
 using LuaNativeFunction = LuaNET.Lua51.Lua.lua_CFunction;
+using LuaNativeState = LuaNET.Lua51.lua_State;
 
 namespace NLua.Method
 {
@@ -326,9 +327,9 @@ namespace NLua.Method
          * Calls the method. Receives the arguments from the Lua stack
          * and returns values in it.
          */
-        int Call(IntPtr state)
+        int Call(LuaNativeState state)
         {
-            var luaState = LuaState.FromIntPtr(state);
+            var luaState = new LuaState(state);
 
             MethodBase methodToCall = _method;
             object targetObject = _target;

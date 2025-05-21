@@ -7,6 +7,8 @@ using System.Runtime.InteropServices;
 using NativeMethods = LuaNET.Lua51.Lua;
 using LuaState = LuaNET.Lua51.lua_State;
 using LuaNativeFunction = LuaNET.Lua51.Lua.lua_CFunction;
+using LuaDebug = LuaNET.Lua51.Lua.lua_Debug;
+using LuaHookFunction = LuaNET.Lua51.Lua.lua_Hook;
 using System.Runtime.CompilerServices;
 
 public class Lua
@@ -36,6 +38,17 @@ public class Lua
     /// Get the main thread object, if the object is the main thread will be equal this
     /// </summary>
     public Lua MainThread => _mainState ?? this;
+
+
+    /// <summary>
+    /// Returns the current hook count. 
+    /// </summary>
+    public int HookCount => NativeMethods.lua_gethookcount(_luaState);
+
+    /// <summary>
+    /// Returns the current hook mask. 
+    /// </summary>
+    public LuaHookMask HookMask => (LuaHookMask)NativeMethods.lua_gethookmask(_luaState);
 
     /// <summary>
     /// Initialize Lua state, and open the default libs
@@ -515,6 +528,26 @@ public class Lua
     {
         return (LuaType)NativeMethods.luaL_getmetafield(_luaState, obj, field);
     }
+
+    public int GetStack(int level, LuaDebug ar)
+    {
+        return NativeMethods.lua_getstack(_luaState, level, ar);
+    }
+
+    public void SetHook(LuaHookFunction hookFunction, LuaHookMask mask, int count)
+    {
+        NativeMethods.lua_sethook(_luaState, hookFunction, (int)mask, count);
+    }
+
+    public void GetRef(int reference)
+    {
+        NativeMethods.lua_getref(_luaState, reference);
+    }
+
+    public int GarbageCollector(LuaGC what, int data)
+    {
+        return NativeMethods.lua_gc(_luaState, (int)what, data);
+    }
 }
 
 public static class LuaRegistry
@@ -577,4 +610,105 @@ public enum LuaCompare
     /// compares for less or equal 
     /// </summary>
     LessOrEqual = 2
+}
+
+public enum LuaHookEvent
+{
+    /// <summary>
+    /// The call hook: is called when the interpreter calls a function. The hook is called just after Lua enters the new function, before the function gets its arguments. 
+    /// </summary>
+    Call = 0,
+    /// <summary>
+    /// The return hook: is called when the interpreter returns from a function. The hook is called just before Lua leaves the function. There is no standard way to access the values to be returned by the function. 
+    /// </summary>
+    Return = 1,
+    /// <summary>
+    /// The line hook: is called when the interpreter is about to start the execution of a new line of code, or when it jumps back in the code (even to the same line). (This event only happens while Lua is executing a Lua function.) 
+    /// </summary>
+    Line = 2,
+    /// <summary>
+    ///  The count hook: is called after the interpreter executes every count instructions. (This event only happens while Lua is executing a Lua function.) 
+    /// </summary>
+    Count = 3,
+    /// <summary>
+    /// Tail Call
+    /// </summary>
+    TailCall = 4,
+}
+
+[Flags]
+public enum LuaHookMask
+{
+    /// <summary>
+    /// Disabled hook
+    /// </summary>
+#pragma warning disable CA1008 // Enums should have zero value
+    Disabled = 0,
+#pragma warning restore CA1008 // Enums should have zero value
+    /// <summary>
+    /// The call hook: is called when the interpreter calls a function. The hook is called just after Lua enters the new function, before the function gets its arguments. 
+    /// </summary>
+    Call = 1 << LuaHookEvent.Call,
+    /// <summary>
+    /// The return hook: is called when the interpreter returns from a function. The hook is called just before Lua leaves the function. There is no standard way to access the values to be returned by the function. 
+    /// </summary>
+    Return = 1 << LuaHookEvent.Return,
+    /// <summary>
+    /// The line hook: is called when the interpreter is about to start the execution of a new line of code, or when it jumps back in the code (even to the same line). (This event only happens while Lua is executing a Lua function.) 
+    /// </summary>
+    Line = 1 << LuaHookEvent.Line,
+    /// <summary>
+    ///  The count hook: is called after the interpreter executes every count instructions. (This event only happens while Lua is executing a Lua function.) 
+    /// </summary>
+    Count = 1 << LuaHookEvent.Count,
+}
+
+public enum LuaGC
+{
+    /// <summary>
+    ///  Stops the garbage collector. 
+    /// </summary>
+    Stop = 0,
+    /// <summary>
+    /// Restarts the garbage collector. 
+    /// </summary>
+    Restart = 1,
+    /// <summary>
+    /// Performs a full garbage-collection cycle. 
+    /// </summary>
+    Collect = 2,
+    /// <summary>
+    ///  Returns the current amount of memory (in Kbytes) in use by Lua. 
+    /// </summary>
+    Count = 3,
+    /// <summary>
+    ///  Returns the remainder of dividing the current amount of bytes of memory in use by Lua by 1024
+    /// </summary>
+    Countb = 4,
+    /// <summary>
+    ///  Performs an incremental step of garbage collection. 
+    /// </summary>
+    Step = 5,
+    /// <summary>
+    /// The options LUA_GCSETPAUSE and LUA_GCSETSTEPMUL of the function lua_gc are deprecated. You should use the new option LUA_GCINC to set them. 
+    /// </summary>
+    [Obsolete("Deprecatad since Lua 5.4, Use Incremental instead")]
+    SetPause = 6,
+    /// <summary>
+    /// The options LUA_GCSETPAUSE and LUA_GCSETSTEPMUL of the function lua_gc are deprecated. You should use the new option LUA_GCINC to set them. 
+    /// </summary>
+    [Obsolete("Deprecatad since Lua 5.4, Use Incremental instead")]
+    SetStepMultiplier = 7,
+    /// <summary>
+    ///  returns a boolean that tells whether the collector is running
+    /// </summary>
+    IsRunning = 9,
+    /// <summary>
+    ///  Changes the collector to generational mode with the given parameters (see §2.5.2). Returns the previous mode (LUA_GCGEN or LUA_GCINC). 
+    /// </summary>
+    Generational = 10,
+    /// <summary>
+    /// Changes the collector to incremental mode with the given parameters (see §2.5.1). Returns the previous mode (LUA_GCGEN or LUA_GCINC). 
+    /// </summary>
+    Incremental = 11,
 }

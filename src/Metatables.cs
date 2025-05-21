@@ -14,6 +14,7 @@ using NLua.Extensions;
 #endif
 
 using LuaState = NLua.LuaNetCompat.Lua;
+using LuaNativeState = LuaNET.Lua51.lua_State;
 using LuaNativeFunction = LuaNET.Lua51.Lua.lua_CFunction;
 using NLua.Exceptions;
 
@@ -88,9 +89,9 @@ namespace NLua
         [MonoPInvokeCallback(typeof(LuaNativeFunction))]
 #pragma warning restore CA1416 // Validate platform compatibility
 #endif
-        private static int RunFunctionDelegate(IntPtr luaState)
+        private static int RunFunctionDelegate(LuaNativeState luaState)
         {
-            var state = LuaState.FromIntPtr(luaState);
+            var state = new LuaState(luaState);
             var translator = ObjectTranslatorPool.Instance.Find(state);
             var func = (LuaNativeFunction)translator.GetRawNetObject(state, 1);
             if (func == null)
@@ -113,9 +114,9 @@ namespace NLua
         [MonoPInvokeCallback(typeof(LuaNativeFunction))]
 #pragma warning restore CA1416 // Validate platform compatibility
 #endif
-        private static int CollectObject(IntPtr state)
+        private static int CollectObject(LuaNativeState state)
         {
-            var luaState = LuaState.FromIntPtr(state);
+            var luaState = new LuaState(state);
             var translator = ObjectTranslatorPool.Instance.Find(luaState);
             return CollectObject(luaState, translator);
         }
@@ -138,9 +139,9 @@ namespace NLua
         [MonoPInvokeCallback(typeof(LuaNativeFunction))]
 #pragma warning restore CA1416 // Validate platform compatibility
 #endif
-        private static int ToStringLua(IntPtr state)
+        private static int ToStringLua(LuaNativeState state)
         {
-            var luaState = LuaState.FromIntPtr(state);
+            var luaState = new LuaState(state);
             var translator = ObjectTranslatorPool.Instance.Find(luaState);
             return ToStringLua(luaState, translator);
         }
@@ -166,9 +167,9 @@ namespace NLua
         [MonoPInvokeCallback(typeof(LuaNativeFunction))]
 #pragma warning restore CA1416 // Validate platform compatibility
 #endif
-        static int AddLua(IntPtr luaState)
+        static int AddLua(LuaNativeState luaState)
         {
-            var state = LuaState.FromIntPtr(luaState);
+            var state = new LuaState(luaState);
             var translator = ObjectTranslatorPool.Instance.Find(state);
             int result = MatchOperator(state, "op_Addition", translator);
             var exception = translator.GetObject(state, -1) as LuaScriptException;
@@ -186,9 +187,9 @@ namespace NLua
         [MonoPInvokeCallback(typeof(LuaNativeFunction))]
 #pragma warning restore CA1416 // Validate platform compatibility
 #endif
-        static int SubtractLua(IntPtr luaState)
+        static int SubtractLua(LuaNativeState luaState)
         {
-            var state = LuaState.FromIntPtr(luaState);
+            var state = new LuaState(luaState);
             var translator = ObjectTranslatorPool.Instance.Find(state);
             int result = MatchOperator(state, "op_Subtraction", translator);
             var exception = translator.GetObject(state, -1) as LuaScriptException;
@@ -206,9 +207,9 @@ namespace NLua
         [MonoPInvokeCallback(typeof(LuaNativeFunction))]
 #pragma warning restore CA1416 // Validate platform compatibility
 #endif
-        static int MultiplyLua(IntPtr luaState)
+        static int MultiplyLua(LuaNativeState luaState)
         {
-            var state = LuaState.FromIntPtr(luaState);
+            var state = new LuaState(luaState);
             var translator = ObjectTranslatorPool.Instance.Find(state);
             int result = MatchOperator(state, "op_Multiply", translator);
             var exception = translator.GetObject(state, -1) as LuaScriptException;
@@ -226,9 +227,9 @@ namespace NLua
         [MonoPInvokeCallback(typeof(LuaNativeFunction))]
 #pragma warning restore CA1416 // Validate platform compatibility
 #endif
-        static int DivideLua(IntPtr luaState)
+        static int DivideLua(LuaNativeState luaState)
         {
-            var state = LuaState.FromIntPtr(luaState);
+            var state = new LuaState(luaState);
             var translator = ObjectTranslatorPool.Instance.Find(state);
             int result = MatchOperator(state, "op_Division", translator);
             var exception = translator.GetObject(state, -1) as LuaScriptException;
@@ -246,9 +247,9 @@ namespace NLua
         [MonoPInvokeCallback(typeof(LuaNativeFunction))]
 #pragma warning restore CA1416 // Validate platform compatibility
 #endif
-        static int ModLua(IntPtr luaState)
+        static int ModLua(LuaNativeState luaState)
         {
-            var state = LuaState.FromIntPtr(luaState);
+            var state = new LuaState(luaState);
             var translator = ObjectTranslatorPool.Instance.Find(state);
             int result = MatchOperator(state, "op_Modulus", translator);
             var exception = translator.GetObject(state, -1) as LuaScriptException;
@@ -266,9 +267,9 @@ namespace NLua
         [MonoPInvokeCallback(typeof(LuaNativeFunction))]
 #pragma warning restore CA1416 // Validate platform compatibility
 #endif
-        static int UnaryNegationLua(IntPtr luaState)
+        static int UnaryNegationLua(LuaNativeState luaState)
         {
-            var state = LuaState.FromIntPtr(luaState);
+            var state = new LuaState(luaState);
             var translator = ObjectTranslatorPool.Instance.Find(state);
             int result = UnaryNegationLua(state, translator);
             var exception = translator.GetObject(state, -1) as LuaScriptException;
@@ -310,9 +311,9 @@ namespace NLua
         [MonoPInvokeCallback(typeof(LuaNativeFunction))]
 #pragma warning restore CA1416 // Validate platform compatibility
 #endif
-        static int EqualLua(IntPtr luaState)
+        static int EqualLua(LuaNativeState luaState)
         {
-            var state = LuaState.FromIntPtr(luaState);
+            var state = new LuaState(luaState);
             var translator = ObjectTranslatorPool.Instance.Find(state);
             int result = MatchOperator(state, "op_Equality", translator);
             var exception = translator.GetObject(state, -1) as LuaScriptException;
@@ -330,9 +331,9 @@ namespace NLua
         [MonoPInvokeCallback(typeof(LuaNativeFunction))]
 #pragma warning restore CA1416 // Validate platform compatibility
 #endif
-        static int LessThanLua(IntPtr luaState)
+        static int LessThanLua(LuaNativeState luaState)
         {
-            var state = LuaState.FromIntPtr(luaState);
+            var state = new LuaState(luaState);
             var translator = ObjectTranslatorPool.Instance.Find(state);
             int result = MatchOperator(state, "op_LessThan", translator);
             var exception = translator.GetObject(state, -1) as LuaScriptException;
@@ -350,9 +351,9 @@ namespace NLua
         [MonoPInvokeCallback(typeof(LuaNativeFunction))]
 #pragma warning restore CA1416 // Validate platform compatibility
 #endif
-        static int LessThanOrEqualLua(IntPtr luaState)
+        static int LessThanOrEqualLua(LuaNativeState luaState)
         {
-            var state = LuaState.FromIntPtr(luaState);
+            var state = new LuaState(luaState);
             var translator = ObjectTranslatorPool.Instance.Find(state);
             int result = MatchOperator(state, "op_LessThanOrEqual", translator);
             var exception = translator.GetObject(state, -1) as LuaScriptException;
@@ -402,9 +403,9 @@ namespace NLua
         [MonoPInvokeCallback(typeof(LuaNativeFunction))]
 #pragma warning restore CA1416 // Validate platform compatibility
 #endif
-        private static int GetMethod(IntPtr state)
+        private static int GetMethod(LuaNativeState state)
         {
-            var luaState = LuaState.FromIntPtr(state);
+            var luaState = new LuaState(state);
             var translator = ObjectTranslatorPool.Instance.Find(luaState);
             var instance = translator.MetaFunctionsInstance;
             int result = instance.GetMethodInternal(luaState);
@@ -708,9 +709,9 @@ namespace NLua
         [MonoPInvokeCallback(typeof(LuaNativeFunction))]
 #pragma warning restore CA1416 // Validate platform compatibility
 #endif
-        private static int GetBaseMethod(IntPtr state)
+        private static int GetBaseMethod(LuaNativeState state)
         {
-            var luaState = LuaState.FromIntPtr(state);
+            var luaState = new LuaState(state);
             var translator = ObjectTranslatorPool.Instance.Find(luaState);
             var instance = translator.MetaFunctionsInstance;
             int result = instance.GetBaseMethodInternal(luaState);
@@ -1013,9 +1014,9 @@ namespace NLua
         [MonoPInvokeCallback(typeof(LuaNativeFunction))]
 #pragma warning restore CA1416 // Validate platform compatibility
 #endif
-        private static int SetFieldOrProperty(IntPtr state)
+        private static int SetFieldOrProperty(LuaNativeState state)
         {
-            var luaState = LuaState.FromIntPtr(state);
+            var luaState = new LuaState(state);
             var translator = ObjectTranslatorPool.Instance.Find(luaState);
             var instance = translator.MetaFunctionsInstance;
             int result = instance.SetFieldOrPropertyInternal(luaState);
@@ -1220,9 +1221,9 @@ namespace NLua
         [MonoPInvokeCallback(typeof(LuaNativeFunction))]
 #pragma warning restore CA1416 // Validate platform compatibility
 #endif
-        private static int GetClassMethod(IntPtr state)
+        private static int GetClassMethod(LuaNativeState state)
         {
-            var luaState = LuaState.FromIntPtr(state);
+            var luaState = new LuaState(state);
             var translator = ObjectTranslatorPool.Instance.Find(luaState);
             var instance = translator.MetaFunctionsInstance;
             int result = instance.GetClassMethodInternal(luaState);
@@ -1268,9 +1269,9 @@ namespace NLua
         [MonoPInvokeCallback(typeof(LuaNativeFunction))]
 #pragma warning restore CA1416 // Validate platform compatibility
 #endif
-        private static int SetClassFieldOrProperty(IntPtr state)
+        private static int SetClassFieldOrProperty(LuaNativeState state)
         {
-            var luaState = LuaState.FromIntPtr(state);
+            var luaState = new LuaState(state);
             var translator = ObjectTranslatorPool.Instance.Find(luaState);
             var instance = translator.MetaFunctionsInstance;
             int result = instance.SetClassFieldOrPropertyInternal(luaState);
@@ -1302,9 +1303,9 @@ namespace NLua
         [MonoPInvokeCallback(typeof(LuaNativeFunction))]
 #pragma warning restore CA1416 // Validate platform compatibility
 #endif
-        static int CallDelegate(IntPtr state)
+        static int CallDelegate(LuaNativeState state)
         {
-            var luaState = LuaState.FromIntPtr(state);
+            var luaState = new LuaState(state);
             var translator = ObjectTranslatorPool.Instance.Find(luaState);
             var instance = translator.MetaFunctionsInstance;
             int result = instance.CallDelegateInternal(luaState);
@@ -1374,9 +1375,9 @@ namespace NLua
         [MonoPInvokeCallback(typeof(LuaNativeFunction))]
 #pragma warning restore CA1416 // Validate platform compatibility
 #endif
-        private static int CallConstructor(IntPtr state)
+        private static int CallConstructor(LuaNativeState state)
         {
-            var luaState = LuaState.FromIntPtr(state);
+            var luaState = new LuaState(state);
             var translator = ObjectTranslatorPool.Instance.Find(luaState);
             var instance = translator.MetaFunctionsInstance;
             int result = instance.CallConstructorInternal(luaState);

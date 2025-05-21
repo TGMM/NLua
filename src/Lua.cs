@@ -16,7 +16,9 @@ using NLua.Extensions;
 
 using LuaState = NLua.LuaNetCompat.Lua;
 using LuaNativeFunction = LuaNET.Lua51.Lua.lua_CFunction;
-
+using LuaDebug = LuaNET.Lua51.Lua.lua_Debug;
+using LuaNativeState = LuaNET.Lua51.lua_State;
+using LuaHookFunction = LuaNET.Lua51.Lua.lua_Hook;
 
 namespace NLua
 {
@@ -343,9 +345,9 @@ namespace NLua
         [MonoPInvokeCallback(typeof(LuaNativeFunction))]
 #pragma warning restore CA1416 // Validate platform compatibility
 #endif
-        static int PanicCallback(IntPtr state)
+        static int PanicCallback(LuaNativeState state)
         {
-            var luaState = LuaState.FromIntPtr(state);
+            var luaState = new LuaState(state);
             string reason = string.Format("Unprotected error in call to Lua API ({0})", luaState.ToString(-1, false));
             throw new LuaException(reason);
         }
@@ -1005,12 +1007,12 @@ namespace NLua
 
         public int GetStack(int level, ref LuaDebug ar)
         {
-            return _luaState.GetStack(level, ref ar);
+            return _luaState.GetStack(level, ar);
         }
 
         public bool GetInfo(string what, ref LuaDebug ar)
         {
-            return _luaState.GetInfo(what, ref ar);
+            return _luaState.GetInfo(what, ar);
         }
 
         /// <summary>
@@ -1046,19 +1048,17 @@ namespace NLua
         [MonoPInvokeCallback(typeof(LuaHookFunction))]
 #pragma warning restore CA1416 // Validate platform compatibility
 #endif
-        static void DebugHookCallback(IntPtr luaState, IntPtr luaDebug)
+        static void DebugHookCallback(LuaNativeState luaState, LuaDebug luaDebug)
         {
-            var state = LuaState.FromIntPtr(luaState);
+            var state = new LuaState(luaState);
 
             state.GetStack(0, luaDebug);
 
             if (!state.GetInfo("Snlu", luaDebug))
                 return;
 
-            var debug = LuaDebug.FromIntPtr(luaDebug);
-
             ObjectTranslator translator = ObjectTranslatorPool.Instance.Find(state);
-            translator.Interpreter?.DebugHookCallbackInternal(debug);
+            translator.Interpreter?.DebugHookCallbackInternal(luaDebug);
         }
 
         private void DebugHookCallbackInternal(LuaDebug luaDebug)
