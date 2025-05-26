@@ -6,6 +6,10 @@ using NativeMethods = LuaNET.Lua51.Lua;
 using LuaState = LuaNET.Lua51.lua_State;
 using LuaDebug = LuaNET.Lua51.Lua.lua_Debug;
 using LuaHookFunction = LuaNET.Lua51.Lua.lua_Hook;
+using LuaWriter = LuaNET.Lua51.Lua.lua_Writer;
+using LuaAlloc = LuaNET.Lua51.Lua.lua_Alloc;
+using LuaReader = LuaNET.Lua51.Lua.lua_Reader;
+using LuaNativeFunction = LuaNET.Lua51.Lua.lua_CFunction;
 
 namespace NLua.LuaNetCompat;
 
@@ -67,12 +71,12 @@ public class Lua : IDisposable
     {
         Encoding = Encoding.ASCII;
 
-        _luaState = NativeMethods.lua_newstate(allocator.ToFunctionPointer(), ud);
+        _luaState = NativeMethods.lua_newstate(allocator, (UIntPtr)ud);
 
         SetExtraObject(this, true);
     }
 
-    private Lua(IntPtr luaThread, Lua mainState)
+    private Lua(LuaState luaThread, Lua mainState)
     {
         _mainState = mainState;
         _luaState = luaThread;
@@ -84,17 +88,28 @@ public class Lua : IDisposable
 
     /// <summary>
     /// Get the Lua object from IntPtr
-    /// Useful for LuaFunction callbacks, if the Lua object was already collected will return null.
+    /// Useful for LuaNativeFunction callbacks, if the Lua object was already collected will return null.
     /// </summary>
-    /// <param name="luaState"></param>
+    /// <param name="luaStatePtr"></param>
     /// <returns></returns>
-    public static Lua FromIntPtr(IntPtr luaState)
+    public static Lua FromIntPtr(IntPtr luaStatePtr)
     {
-        if (luaState == IntPtr.Zero)
+        if (luaStatePtr == IntPtr.Zero)
             return null;
 
-        Lua state = GetExtraObject<Lua>(luaState);
-        if (state != null && (IntPtr)state._luaState.Handle == luaState)
+        Lua state = GetExtraObject<Lua>(luaStatePtr);
+        if (state != null && (IntPtr)state._luaState.Handle == luaStatePtr)
+            return state;
+
+        LuaState luaState = new LuaState { Handle = (UIntPtr)luaStatePtr.ToInt64() };
+
+        return new Lua(luaState, state.MainThread);
+    }
+
+    public static Lua FromLuaState(LuaState luaState)
+    {
+        Lua state = GetExtraObject<Lua>((IntPtr)luaState.Handle);
+        if (state != null && state._luaState.Handle == luaState.Handle)
             return state;
 
         return new Lua(luaState, state.MainThread);
@@ -164,10 +179,14 @@ public class Lua : IDisposable
     /// </summary>
     /// <param name="index"></param>
     /// <returns></returns>
-    // public int AbsIndex(int index)
-    // {
-    //     return NativeMethods.lua_absindex(_luaState, index);
-    // }
+    public int AbsIndex(int i)
+    {
+        if (i < 0 && i > NativeMethods.LUA_REGISTRYINDEX)
+        {
+            i += NativeMethods.lua_gettop(_luaState) + 1;
+        }
+        return i;
+    }
 
     /// <summary>
     /// Performs an arithmetic or bitwise operation over the two values (or one, in the case of negations) at the top of the stack, with the value at the top being the second operand, pops these values, and pushes the result of the operation. The function follows the semantics of the corresponding Lua operator (that is, it may call metamethods). 
@@ -183,10 +202,9 @@ public class Lua : IDisposable
     /// </summary>
     /// <param name="panicFunction"></param>
     /// <returns></returns>
-    public LuaFunction AtPanic(LuaFunction panicFunction)
+    public LuaNativeFunction AtPanic(LuaNativeFunction panicFunction)
     {
-        IntPtr newPanicPtr = panicFunction.ToFunctionPointer();
-        return NativeMethods.lua_atpanic(_luaState, newPanicPtr).ToLuaFunction();
+        return NativeMethods.lua_atpanic(_luaState, panicFunction);
     }
 
     /// <summary>
@@ -251,10 +269,13 @@ public class Lua : IDisposable
     /// </summary>
     /// <param name="fromIndex"></param>
     /// <param name="toIndex"></param>
-    // public void Copy(int fromIndex, int toIndex)
-    // {
-    //     NativeMethods.lua_copy(_luaState, fromIndex, toIndex);
-    // }
+    public void Copy(int fromIndex, int toIndex)
+    {
+        int abs_to = this.AbsIndex(toIndex);
+        NativeMethods.luaL_checkstack(_luaState, 1, "not enough stack slots");
+        NativeMethods.lua_pushvalue(_luaState, fromIndex);
+        NativeMethods.lua_replace(_luaState, abs_to);
+    }
 
     /// <summary>
     /// Creates a new empty table and pushes it onto the stack. Parameter narr is a hint for how many elements the table will have as a sequence; parameter nrec is a hint for how many other elements the table will have
@@ -273,9 +294,9 @@ public class Lua : IDisposable
     /// <param name="data"></param>
     /// <param name="stripDebug"></param>
     /// <returns></returns>
-    public int Dump(LuaWriter writer, IntPtr data, bool stripDebug)
+    public int Dump(LuaWriter writer, UIntPtr data)
     {
-        return NativeMethods.lua_dump(_luaState, writer.ToFunctionPointer(), data, stripDebug ? 1 : 0);
+        return NativeMethods.lua_dump(_luaState, writer, data);
     }
 
     /// <summary>
@@ -307,19 +328,19 @@ public class Lua : IDisposable
     /// <param name="data">passed to lua_gc vargs</param>
     /// <param name="data2">passed to lua_gc vargs</param>
     /// <returns></returns>
-    public int GarbageCollector(LuaGC what, int data, int data2)
-    {
-        return NativeMethods.lua_gc(_luaState, (int)what, data, data2);
-    }
+    // public int GarbageCollector(LuaGC what, int data, int data2)
+    // {
+    //     return NativeMethods.lua_gc(_luaState, (int)what, data, data2);
+    // }
 
     /// <summary>
     /// Returns the memory-allocation function of a given state. If ud is not NULL, Lua stores in *ud the opaque pointer given when the memory-allocator function was set. 
     /// </summary>
     /// <param name="ud"></param>
     /// <returns></returns>
-    public LuaAlloc GetAllocFunction(ref IntPtr ud)
+    public LuaAlloc GetAllocFunction(ref UIntPtr ud)
     {
-        return NativeMethods.lua_getallocf(_luaState, ref ud).ToLuaAlloc();
+        return NativeMethods.lua_getallocf(_luaState, out ud);
     }
 
     /// <summary>
@@ -329,9 +350,9 @@ public class Lua : IDisposable
     /// <param name="index"></param>
     /// <param name="key"></param>
     /// <returns></returns>
-    public LuaType GetField(int index, string key)
+    public void GetField(int index, string key)
     {
-        return (LuaType)NativeMethods.lua_getfield(_luaState, index, key);
+        NativeMethods.lua_getfield(_luaState, index, key);
     }
 
     /// <summary>
@@ -341,9 +362,9 @@ public class Lua : IDisposable
     /// <param name="index"></param>
     /// <param name="key"></param>
     /// <returns></returns>
-    public LuaType GetField(LuaRegistry index, string key)
+    public void GetField(LuaRegistry index, string key)
     {
-        return (LuaType)NativeMethods.lua_getfield(_luaState, (int)index, key);
+        NativeMethods.lua_getfield(_luaState, (int)index, key);
     }
 
     /// <summary>
@@ -351,9 +372,9 @@ public class Lua : IDisposable
     /// </summary>
     /// <param name="name"></param>
     /// <returns></returns>
-    public LuaType GetGlobal(string name)
+    public void GetGlobal(string name)
     {
-        return (LuaType)NativeMethods.lua_getglobal(_luaState, name);
+        NativeMethods.lua_getglobal(_luaState, name);
     }
 
     /// <summary>
@@ -374,46 +395,9 @@ public class Lua : IDisposable
     /// <param name="what"></param>
     /// <param name="ar"></param>
     /// <returns>This function returns false on error (for instance, an invalid option in what). </returns>
-    public bool GetInfo(string what, IntPtr ar)
-    {
-        return NativeMethods.lua_getinfo(_luaState, what, ar) != 0;
-    }
-
-    /// <summary>
-    /// Gets information about a specific function or function invocation. 
-    /// </summary>
-    /// <param name="what"></param>
-    /// <param name="ar"></param>
-    /// <returns>This function returns false on error (for instance, an invalid option in what). </returns>
     public bool GetInfo(string what, ref LuaDebug ar)
     {
-        IntPtr pDebug = Marshal.AllocHGlobal(Marshal.SizeOf(ar));
-        bool ret = false;
-        try
-        {
-            Marshal.StructureToPtr(ar, pDebug, false);
-
-            ret = GetInfo(what, pDebug);
-            ar = LuaDebug.FromIntPtr(pDebug);
-
-        }
-        finally
-        {
-            Marshal.FreeHGlobal(pDebug);
-        }
-        return ret;
-    }
-
-    /// <summary>
-    /// Gets information about a local variable of a given activation record or a given function. 
-    /// </summary>
-    /// <param name="ar"></param>
-    /// <param name="n"></param>
-    /// <returns></returns>
-    public string GetLocal(IntPtr ar, int n)
-    {
-        IntPtr ptr = NativeMethods.lua_getlocal(_luaState, ar, n);
-        return Marshal.PtrToStringAnsi(ptr);
+        return NativeMethods.lua_getinfo(_luaState, what, ar) != 0;
     }
 
     /// <summary>
@@ -424,21 +408,7 @@ public class Lua : IDisposable
     /// <returns></returns>
     public string GetLocal(LuaDebug ar, int n)
     {
-        IntPtr pDebug = Marshal.AllocHGlobal(Marshal.SizeOf(ar));
-        string ret = string.Empty;
-        try
-        {
-            Marshal.StructureToPtr(ar, pDebug, false);
-
-            ret = GetLocal(pDebug, n);
-            ar = LuaDebug.FromIntPtr(pDebug);
-
-        }
-        finally
-        {
-            Marshal.FreeHGlobal(pDebug);
-        }
-        return ret;
+        return NativeMethods.lua_getlocal(_luaState, ar, n);
     }
 
     /// <summary>
@@ -457,45 +427,19 @@ public class Lua : IDisposable
     /// <param name="level"></param>
     /// <param name="ar"></param>
     /// <returns></returns>
-    public int GetStack(int level, IntPtr ar)
+    public int GetStack(int level, ref LuaDebug ar)
     {
         return NativeMethods.lua_getstack(_luaState, level, ar);
     }
 
     /// <summary>
-    /// Gets information about the interpreter runtime stack. 
-    /// </summary>
-    /// <param name="level"></param>
-    /// <param name="ar"></param>
-    /// <returns></returns>
-    public int GetStack(int level, ref LuaDebug ar)
-    {
-        IntPtr pDebug = Marshal.AllocHGlobal(Marshal.SizeOf(ar));
-        int ret = 0;
-        try
-        {
-            Marshal.StructureToPtr(ar, pDebug, false);
-
-            ret = GetStack(level, pDebug);
-            ar = LuaDebug.FromIntPtr(pDebug);
-
-        }
-        finally
-        {
-            Marshal.FreeHGlobal(pDebug);
-        }
-        return ret;
-    }
-
-
-    /// <summary>
     /// Pushes onto the stack the value t[k], where t is the value at the given index and k is the value at the top of the stack. 
     /// </summary>
     /// <param name="index"></param>
     /// <returns>Returns the type of the pushed value</returns>
-    public LuaType GetTable(int index)
+    public void GetTable(int index)
     {
-        return (LuaType)NativeMethods.lua_gettable(_luaState, index);
+        NativeMethods.lua_gettable(_luaState, index);
     }
 
     /// <summary>
@@ -503,9 +447,9 @@ public class Lua : IDisposable
     /// </summary>
     /// <param name="index"></param>
     /// <returns>Returns the type of the pushed value</returns>
-    public LuaType GetTable(LuaRegistry index)
+    public void GetTable(LuaRegistry index)
     {
-        return (LuaType)NativeMethods.lua_gettable(_luaState, (int)index);
+        NativeMethods.lua_gettable(_luaState, (int)index);
     }
 
 
@@ -529,7 +473,8 @@ public class Lua : IDisposable
     /// </summary>
     /// <param name="index"></param>
     /// <returns></returns>
-    public int GetUserValue(int index) => GetIndexedUserValue(index, 1);
+    // public int GetUserValue(int index) => GetIndexedUserValue(index, 1);
+
     /// <summary>
     ///  Gets information about the n-th upvalue of the closure at index funcindex. It pushes the upvalue's value onto the stack and returns its name. Returns NULL (and pushes nothing) when the index n is greater than the number of upvalues.
     ///  For C functions, this function uses the empty string "" as a name for all upvalues. (For Lua functions, upvalues are the external local variables that the function uses, and that are consequently included in its closure.)
@@ -538,17 +483,17 @@ public class Lua : IDisposable
     /// <param name="functionIndex"></param>
     /// <param name="n"></param>
     /// <returns>Returns the type of the pushed value. </returns>
-    public string GetUpValue(int functionIndex, int n)
-    {
-        IntPtr ptr = NativeMethods.lua_getupvalue(_luaState, functionIndex, n);
-        return Marshal.PtrToStringAnsi(ptr);
-    }
+    // public string GetUpValue(int functionIndex, int n)
+    // {
+    //     IntPtr ptr = NativeMethods.lua_getupvalue(_luaState, functionIndex, n);
+    //     return Marshal.PtrToStringAnsi(ptr);
+    // }
 
 
     /// <summary>
     /// Returns the current hook function. 
     /// </summary>
-    public LuaHookFunction Hook => NativeMethods.lua_gethook(_luaState).ToLuaHookFunction();
+    public LuaHookFunction Hook => NativeMethods.lua_gethook(_luaState);
 
     /// <summary>
     /// Returns the current hook count. 
@@ -690,15 +635,13 @@ public class Lua : IDisposable
     /// <returns></returns>
     public LuaStatus Load
         (LuaReader reader,
-         IntPtr data,
-         string chunkName,
-         string mode)
+         UIntPtr data,
+         string chunkName)
     {
         return (LuaStatus)NativeMethods.lua_load(_luaState,
-                                                 reader.ToFunctionPointer(),
+                                                 reader,
                                                  data,
-                                                 chunkName,
-                                                 mode);
+                                                 chunkName);
     }
 
     /// <summary>
@@ -712,7 +655,7 @@ public class Lua : IDisposable
     /// <returns></returns>
     public Lua NewThread()
     {
-        IntPtr thread = NativeMethods.lua_newthread(_luaState);
+        LuaState thread = NativeMethods.lua_newthread(_luaState);
         return new Lua(thread, this);
     }
 
@@ -733,10 +676,10 @@ public class Lua : IDisposable
     /// </summary>
     /// <param name="size"></param>
     /// <returns></returns>
-    public IntPtr NewUserData(int size)
-    {
-        return NewIndexedUserData(size, 1);
-    }
+    // public IntPtr NewUserData(int size)
+    // {
+    //     return NewIndexedUserData(size, 1);
+    // }
 
     /// <summary>
     /// Pops a key from the stack, and pushes a key–value pair from the table at the given index (the "next" pair after the given key).
@@ -801,16 +744,16 @@ public class Lua : IDisposable
     /// </summary>
     /// <param name="function"></param>
     /// <param name="n"></param>
-    public void PushCClosure(LuaFunction function, int n)
+    public void PushCClosure(LuaNativeFunction function, int n)
     {
-        NativeMethods.lua_pushcclosure(_luaState, function.ToFunctionPointer(), n);
+        NativeMethods.lua_pushcclosure(_luaState, function, n);
     }
 
     /// <summary>
     /// Pushes a C function onto the stack. This function receives a pointer to a C function and pushes onto the stack a Lua value of type function that, when called, invokes the corresponding C function. 
     /// </summary>
     /// <param name="function"></param>
-    public void PushCFunction(LuaFunction function)
+    public void PushCFunction(LuaNativeFunction function)
     {
         PushCClosure(function, 0);
     }
@@ -833,7 +776,7 @@ public class Lua : IDisposable
     /// Userdata represent C values in Lua. A light userdata represents a pointer, a void*. It is a value (like a number): you do not create it, it has no individual metatable, and it is not collected (as it was never created). A light userdata is equal to "any" light userdata with the same C address. 
     /// </summary>
     /// <param name="data"></param>
-    public void PushLightUserData(IntPtr data)
+    public void PushLightUserData(UIntPtr data)
     {
         NativeMethods.lua_pushlightuserdata(_luaState, data);
     }
@@ -856,7 +799,7 @@ public class Lua : IDisposable
         }
 
         var handle = GCHandle.Alloc(obj);
-        PushLightUserData(GCHandle.ToIntPtr(handle));
+        PushLightUserData((UIntPtr)GCHandle.ToIntPtr(handle));
     }
 
 
@@ -872,7 +815,7 @@ public class Lua : IDisposable
             return;
         }
 
-        NativeMethods.lua_pushlstring(_luaState, buffer, (UIntPtr)buffer.Length);
+        NativeMethods.lua_pushlstring(_luaState, Encoding.GetString(buffer), (UIntPtr)buffer.Length);
     }
 
     /// <summary>
@@ -950,9 +893,9 @@ public class Lua : IDisposable
     /// </summary>
     /// <param name="index"></param>
     /// <returns>Returns the type of the pushed value</returns>
-    public LuaType RawGet(int index)
+    public void RawGet(int index)
     {
-        return (LuaType)NativeMethods.lua_rawget(_luaState, index);
+        NativeMethods.lua_rawget(_luaState, index);
     }
 
     /// <summary>
@@ -960,9 +903,9 @@ public class Lua : IDisposable
     /// </summary>
     /// <param name="index"></param>
     /// <returns>Returns the type of the pushed value</returns>
-    public LuaType RawGet(LuaRegistry index)
+    public void RawGet(LuaRegistry index)
     {
-        return (LuaType)NativeMethods.lua_rawget(_luaState, (int)index);
+        NativeMethods.lua_rawget(_luaState, (int)index);
     }
 
     /// <summary>
@@ -971,9 +914,9 @@ public class Lua : IDisposable
     /// <param name="index"></param>
     /// <param name="n"></param>
     /// <returns>Returns the type of the pushed value</returns>
-    public LuaType RawGetInteger(int index, long n)
+    public void RawGetInteger(int index, int n)
     {
-        return (LuaType)NativeMethods.lua_rawgeti(_luaState, index, n);
+        NativeMethods.lua_rawgeti(_luaState, index, n);
     }
 
     /// <summary>
@@ -982,9 +925,9 @@ public class Lua : IDisposable
     /// <param name="index"></param>
     /// <param name="n"></param>
     /// <returns></returns>
-    public LuaType RawGetInteger(LuaRegistry index, long n)
+    public void RawGetInteger(LuaRegistry index, int n)
     {
-        return (LuaType)NativeMethods.lua_rawgeti(_luaState, (int)index, n);
+        NativeMethods.lua_rawgeti(_luaState, (int)index, n);
     }
 
 
@@ -994,13 +937,16 @@ public class Lua : IDisposable
     /// <param name="index"></param>
     /// <param name="obj"></param>
     /// <returns>Returns the type of the pushed value. </returns>
-    // public LuaType RawGetByHashCode(int index, object obj)
-    // {
-    //     if (obj == null)
-    //         throw new ArgumentNullException(nameof(obj), "obj shouldn't be null");
+    public LuaType RawGetByHashCode(int index, object obj)
+    {
+        if (obj == null)
+            throw new ArgumentNullException(nameof(obj), "obj shouldn't be null");
 
-    //     return (LuaType)NativeMethods.lua_rawgetp(_luaState, index, (IntPtr)obj.GetHashCode());
-    // }
+        int abs_i = this.AbsIndex(index);
+        NativeMethods.lua_pushlightuserdata(_luaState, (UIntPtr)obj.GetHashCode());
+        NativeMethods.lua_rawget(_luaState, abs_i);
+        return (LuaType)NativeMethods.lua_type(_luaState, -1);
+    }
 
     /// <summary>
     /// Returns the raw "length" of the value at the given index: for strings, this is the string length; for tables, this is the result of the length operator ('#') with no metamethods; for userdata, this is the size of the block of memory allocated for the userdata; for other values, it is 0. 
@@ -1036,7 +982,7 @@ public class Lua : IDisposable
     /// </summary>
     /// <param name="index">index of table</param>
     /// <param name="i">value</param>
-    public void RawSetInteger(int index, long i)
+    public void RawSetInteger(int index, int i)
     {
         NativeMethods.lua_rawseti(_luaState, index, i);
     }
@@ -1047,7 +993,7 @@ public class Lua : IDisposable
     /// </summary>
     /// <param name="index"></param>
     /// <param name="i"></param>
-    public void RawSetInteger(LuaRegistry index, long i)
+    public void RawSetInteger(LuaRegistry index, int i)
     {
         NativeMethods.lua_rawseti(_luaState, (int)index, i);
     }
@@ -1071,7 +1017,7 @@ public class Lua : IDisposable
     /// </summary>
     /// <param name="name"></param>
     /// <param name="function"></param>
-    public void Register(string name, LuaFunction function)
+    public void Register(string name, LuaNativeFunction function)
     {
         PushCFunction(function);
         SetGlobal(name);
@@ -1108,10 +1054,10 @@ public class Lua : IDisposable
     /// <param name="arguments"></param>
     /// <param name="results"></param>
     /// <returns></returns>
-    public LuaStatus Resume(Lua from, int arguments, out int results)
-    {
-        return (LuaStatus)NativeMethods.lua_resume(_luaState, from?._luaState ?? IntPtr.Zero, arguments, out results);
-    }
+    // public LuaStatus Resume(Lua from, int arguments, out int results)
+    // {
+    //     return (LuaStatus)NativeMethods.lua_resume(_luaState, from?._luaState ?? IntPtr.Zero, arguments, out results);
+    // }
 
     /// <summary>
     /// Compatibility Resume without results.
@@ -1119,10 +1065,20 @@ public class Lua : IDisposable
     /// <param name="from"></param>
     /// <param name="arguments"></param>
     /// <returns></returns>
-    public LuaStatus Resume(Lua from, int arguments)
+    // public LuaStatus Resume(Lua from, int arguments)
+    // {
+    //     int ignore;
+    //     return (LuaStatus)NativeMethods.lua_resume(_luaState, from?._luaState ?? IntPtr.Zero, arguments, out ignore);
+    // }
+
+    /// <summary>
+    /// Compatibility Resume.
+    /// </summary>
+    /// <param name="nargs"></param>
+    /// <returns></returns>
+    public LuaStatus Resume(int nargs)
     {
-        int ignore;
-        return (LuaStatus)NativeMethods.lua_resume(_luaState, from?._luaState ?? IntPtr.Zero, arguments, out ignore);
+        return (LuaStatus)NativeMethods.lua_resume(_luaState, nargs);
     }
 
     /// <summary>
@@ -1151,7 +1107,7 @@ public class Lua : IDisposable
     /// <param name="ud"></param>
     public void SetAllocFunction(LuaAlloc alloc, ref IntPtr ud)
     {
-        NativeMethods.lua_setallocf(_luaState, alloc.ToFunctionPointer(), ud);
+        NativeMethods.lua_setallocf(_luaState, alloc, (UIntPtr)ud);
     }
 
     /// <summary>
@@ -1174,7 +1130,7 @@ public class Lua : IDisposable
     /// <param name="count">count (used only with LuaHookMas.Count)</param>
     public void SetHook(LuaHookFunction hookFunction, LuaHookMask mask, int count)
     {
-        NativeMethods.lua_sethook(_luaState, hookFunction.ToFunctionPointer(), (int)mask, count);
+        NativeMethods.lua_sethook(_luaState, hookFunction, (int)mask, count);
     }
 
     /// <summary>
@@ -1191,21 +1147,13 @@ public class Lua : IDisposable
     /// </summary>
     /// <param name="index"></param>
     /// <param name="n"></param>
-    // public void SetInteger(int index, long n)
-    // {
-    //     NativeMethods.lua_seti(_luaState, index, n);
-    // }
-
-    /// <summary>
-    /// Sets the value of a local variable of a given activation record. It assigns the value at the top of the stack to the variable and returns its name. It also pops the value from the stack. 
-    /// </summary>
-    /// <param name="ar"></param>
-    /// <param name="n"></param>
-    /// <returns>Returns NULL (and pops nothing) when the index is greater than the number of active local variables. </returns>
-    public string SetLocal(IntPtr ar, int n)
+    public void SetInteger(int index, long n)
     {
-        IntPtr ptr = NativeMethods.lua_setlocal(_luaState, ar, n);
-        return Marshal.PtrToStringAnsi(ptr);
+        NativeMethods.luaL_checkstack(_luaState, 1, "not enough stack slots available");
+        index = this.AbsIndex(index);
+        NativeMethods.lua_pushinteger(_luaState, n);
+        NativeMethods.lua_insert(_luaState, -2);
+        NativeMethods.lua_settable(_luaState, index);
     }
 
     /// <summary>
@@ -1216,21 +1164,7 @@ public class Lua : IDisposable
     /// <returns>Returns NULL (and pops nothing) when the index is greater than the number of active local variables. </returns>
     public string SetLocal(LuaDebug ar, int n)
     {
-        IntPtr pDebug = Marshal.AllocHGlobal(Marshal.SizeOf(ar));
-        string ret = string.Empty;
-        try
-        {
-            Marshal.StructureToPtr(ar, pDebug, false);
-
-            ret = SetLocal(pDebug, n);
-            ar = LuaDebug.FromIntPtr(pDebug);
-
-        }
-        finally
-        {
-            Marshal.FreeHGlobal(pDebug);
-        }
-        return ret;
+        return NativeMethods.lua_setlocal(_luaState, ar, n);
     }
 
     /// <summary>
@@ -1268,8 +1202,7 @@ public class Lua : IDisposable
     /// <returns>Returns NULL (and pops nothing) when the index n is greater than the number of upvalues. </returns>
     public string SetUpValue(int functionIndex, int n)
     {
-        IntPtr ptr = NativeMethods.lua_setupvalue(_luaState, functionIndex, n);
-        return Marshal.PtrToStringAnsi(ptr);
+        return NativeMethods.lua_setupvalue(_luaState, functionIndex, n);
     }
 
     /// <summary>
@@ -1296,7 +1229,7 @@ public class Lua : IDisposable
     /// Compatibility SetIndexedUserValue with constant 1
     /// </summary>
     /// <param name="index"></param>
-    public void SetUserValue(int index) => SetIndexedUserValue(index, 1);
+    // public void SetUserValue(int index) => SetIndexedUserValue(index, 1);
 
     /// <summary>
     ///  The status can be 0 (LUA_OK) for a normal thread, an error code if the thread finished the execution of a lua_resume with an error, or LUA_YIELD if the thread is suspended. 
@@ -1329,9 +1262,9 @@ public class Lua : IDisposable
     /// </summary>
     /// <param name="index"></param>
     /// <returns></returns>
-    public LuaFunction ToCFunction(int index)
+    public LuaNativeFunction ToCFunction(int index)
     {
-        return NativeMethods.lua_tocfunction(_luaState, index).ToLuaFunction();
+        return NativeMethods.lua_tocfunction(_luaState, index);
     }
 
     /// <summary>
@@ -1377,10 +1310,10 @@ public class Lua : IDisposable
     /// </summary>
     /// <param name="index"></param>
     /// <returns></returns>
-    // public byte[] ToBuffer(int index)
-    // {
-    //     return ToBuffer(index, true);
-    // }
+    public byte[] ToBuffer(int index)
+    {
+        return ToBuffer(index, true);
+    }
 
     /// <summary>
     /// Converts the Lua value at the given index to a byte array.
@@ -1388,32 +1321,63 @@ public class Lua : IDisposable
     /// <param name="index"></param>
     /// <param name="callMetamethod">Calls __tostring field if present</param>
     /// <returns></returns>
-    // public byte[] ToBuffer(int index, bool callMetamethod)
-    // {
-    //     UIntPtr len;
-    //     IntPtr buff;
+    public byte[] ToBuffer(int index, bool callMetamethod)
+    {
+        ulong len = 0;
+        string buff;
 
-    //     if (callMetamethod)
-    //     {
-    //         buff = NativeMethods.luaL_tolstring(_luaState, index, out len);
-    //         Pop(1);
-    //     }
-    //     else
-    //     {
-    //         buff = NativeMethods.lua_tolstring(_luaState, index, out len);
-    //     }
+        if (callMetamethod)
+        {
+            buff = this.LuaLToString(index, ref len);
+            Pop(1);
+        }
+        else
+        {
+            buff = NativeMethods.lua_tolstring(_luaState, index, ref len);
+        }
 
-    //     if (buff == IntPtr.Zero)
-    //         return null;
+        return Encoding.GetBytes(buff, 0, (int)len);
+    }
 
-    //     int length = (int)len;
-    //     if (length == 0)
-    //         return new byte[0];
+    public string LuaLToString(int idx, ref ulong len)
+    {
+        // TODO: Read what this returns
+        if (NativeMethods.luaL_callmeta(_luaState, idx, "__tostring") != 0)
+        {
+            int t = NativeMethods.lua_type(_luaState, idx), tt = 0;
+            string name = null;
+            switch (t)
+            {
+                case NativeMethods.LUA_TNIL:
+                    NativeMethods.lua_pushliteral(_luaState, "nil");
+                    break;
+                case NativeMethods.LUA_TSTRING:
+                case NativeMethods.LUA_TNUMBER:
+                    NativeMethods.lua_pushvalue(_luaState, idx);
+                    break;
+                case NativeMethods.LUA_TBOOLEAN:
+                    if (NativeMethods.lua_toboolean(_luaState, idx) != 0)
+                        NativeMethods.lua_pushliteral(_luaState, "true");
+                    else
+                        NativeMethods.lua_pushliteral(_luaState, "false");
+                    break;
+                default:
+                    tt = NativeMethods.luaL_getmetafield(_luaState, idx, "__name");
+                    name = (tt == NativeMethods.LUA_TSTRING) ? NativeMethods.lua_tostring(_luaState, -1) : NativeMethods.lua_typename(_luaState, t);
+                    NativeMethods.lua_pushstring(_luaState, $"{name} {NativeMethods.lua_topointer(_luaState, idx):X}");
+                    if (tt != NativeMethods.LUA_TNIL)
+                        NativeMethods.lua_replace(_luaState, -2);
+                    break;
+            }
+        }
+        else
+        {
+            if (NativeMethods.lua_isstring(_luaState, -1) != 0)
+                _ = NativeMethods.luaL_error(_luaState, "'__tostring' must return a string");
+        }
 
-    //     byte[] output = new byte[length];
-    //     Marshal.Copy(buff, output, 0, length);
-    //     return output;
-    // }
+        return NativeMethods.lua_tolstring(_luaState, -1, ref len);
+    }
 
     /// <summary>
     /// Converts the Lua value at the given index to a C# string
@@ -1424,6 +1388,7 @@ public class Lua : IDisposable
     {
         return ToString(index, true);
     }
+
     /// <summary>
     /// Converts the Lua value at the given index to a C# string
     /// </summary>
@@ -1469,7 +1434,7 @@ public class Lua : IDisposable
     /// </summary>
     /// <param name="index"></param>
     /// <returns></returns>
-    public IntPtr ToPointer(int index)
+    public UIntPtr ToPointer(int index)
     {
         return NativeMethods.lua_topointer(_luaState, index);
     }
@@ -1483,11 +1448,11 @@ public class Lua : IDisposable
     /// <returns></returns>
     public Lua ToThread(int index)
     {
-        IntPtr state = NativeMethods.lua_tothread(_luaState, index);
+        LuaState state = NativeMethods.lua_tothread(_luaState, index);
         if (state == _luaState)
             return this;
 
-        return FromIntPtr(state);
+        return FromLuaState(state);
     }
 
     /// <summary>
@@ -1527,7 +1492,7 @@ public class Lua : IDisposable
     /// <returns></returns>
     public IntPtr ToUserData(int index)
     {
-        return NativeMethods.lua_touserdata(_luaState, index);
+        return (IntPtr)NativeMethods.lua_touserdata(_luaState, index);
     }
 
 
@@ -1547,8 +1512,7 @@ public class Lua : IDisposable
     /// <returns>Name of the type of the value at the given index</returns>
     public string TypeName(LuaType type)
     {
-        IntPtr ptr = NativeMethods.lua_typename(_luaState, (int)type);
-        return Marshal.PtrToStringAnsi(ptr);
+        return NativeMethods.lua_typename(_luaState, (int)type);
     }
 
     /// <summary>
@@ -1695,18 +1659,9 @@ public class Lua : IDisposable
     /// <returns></returns>
     public byte[] CheckBuffer(int argument)
     {
-        UIntPtr len;
-        IntPtr buff = NativeMethods.luaL_checklstring(_luaState, argument, out len);
-        if (buff == IntPtr.Zero)
-            return null;
-
-        int length = (int)len;
-        if (length == 0)
-            return new byte[0];
-
-        byte[] output = new byte[length];
-        Marshal.Copy(buff, output, 0, length);
-        return output;
+        ulong len = 0;
+        string buff = NativeMethods.luaL_checklstring(_luaState, argument, ref len);
+        return this.Encoding.GetBytes(buff);
     }
 
     /// <summary>
@@ -1877,9 +1832,9 @@ public class Lua : IDisposable
     /// </summary>
     /// <param name="tableName"></param>
     /// <returns>Returns the type of the pushed value. </returns>
-    public LuaType GetMetaTable(string tableName)
+    public void GetMetaTable(string tableName)
     {
-        return GetField(LuaRegistry.Index, tableName);
+        GetField(LuaRegistry.Index, tableName);
     }
 
     /// <summary>
@@ -2084,7 +2039,7 @@ public class Lua : IDisposable
     /// <param name="moduleName"></param>
     /// <param name="openFunction"></param>
     /// <param name="global"></param>
-    // public void RequireF(string moduleName, LuaFunction openFunction, bool global)
+    // public void RequireF(string moduleName, LuaNativeFunction openFunction, bool global)
     // {
     //     NativeMethods.luaL_requiref(_luaState, moduleName, openFunction.ToFunctionPointer(), global ? 1 : 0);
     // }
@@ -2384,8 +2339,7 @@ public enum LuaRegistry
     /// <summary>
     /// pseudo-index used by registry table
     /// </summary>
-    Index = -1_000_000 - 1000,
-    Test = NativeMethods.LUA_REGISTRYINDEX
+    Index = -1_000_000 - 1000
 }
 
 /// <summary>
@@ -2417,5 +2371,5 @@ public struct LuaRegister
     /// Function delegate
     /// </summary>
     [MarshalAs(UnmanagedType.FunctionPtr)]
-    public LuaFunction function;
+    public LuaNativeFunction function;
 }
