@@ -91,7 +91,7 @@ namespace NLua
 #endif
         private static int RunFunctionDelegate(LuaNativeState luaState)
         {
-            var state = new LuaState(luaState);
+            var state = LuaState.FromLuaState(luaState);
             var translator = ObjectTranslatorPool.Instance.Find(state);
             var func = (LuaNativeFunction)translator.GetRawNetObject(state, 1);
             if (func == null)
@@ -116,7 +116,7 @@ namespace NLua
 #endif
         private static int CollectObject(LuaNativeState state)
         {
-            var luaState = new LuaState(state);
+            var luaState = LuaState.FromLuaState(state);
             var translator = ObjectTranslatorPool.Instance.Find(luaState);
             return CollectObject(luaState, translator);
         }
@@ -141,7 +141,7 @@ namespace NLua
 #endif
         private static int ToStringLua(LuaNativeState state)
         {
-            var luaState = new LuaState(state);
+            var luaState = LuaState.FromLuaState(state);
             var translator = ObjectTranslatorPool.Instance.Find(luaState);
             return ToStringLua(luaState, translator);
         }
@@ -169,7 +169,7 @@ namespace NLua
 #endif
         static int AddLua(LuaNativeState luaState)
         {
-            var state = new LuaState(luaState);
+            var state = LuaState.FromLuaState(luaState);
             var translator = ObjectTranslatorPool.Instance.Find(state);
             int result = MatchOperator(state, "op_Addition", translator);
             var exception = translator.GetObject(state, -1) as LuaScriptException;
@@ -189,7 +189,7 @@ namespace NLua
 #endif
         static int SubtractLua(LuaNativeState luaState)
         {
-            var state = new LuaState(luaState);
+            var state = LuaState.FromLuaState(luaState);
             var translator = ObjectTranslatorPool.Instance.Find(state);
             int result = MatchOperator(state, "op_Subtraction", translator);
             var exception = translator.GetObject(state, -1) as LuaScriptException;
@@ -209,7 +209,7 @@ namespace NLua
 #endif
         static int MultiplyLua(LuaNativeState luaState)
         {
-            var state = new LuaState(luaState);
+            var state = LuaState.FromLuaState(luaState);
             var translator = ObjectTranslatorPool.Instance.Find(state);
             int result = MatchOperator(state, "op_Multiply", translator);
             var exception = translator.GetObject(state, -1) as LuaScriptException;
@@ -229,7 +229,7 @@ namespace NLua
 #endif
         static int DivideLua(LuaNativeState luaState)
         {
-            var state = new LuaState(luaState);
+            var state = LuaState.FromLuaState(luaState);
             var translator = ObjectTranslatorPool.Instance.Find(state);
             int result = MatchOperator(state, "op_Division", translator);
             var exception = translator.GetObject(state, -1) as LuaScriptException;
@@ -249,7 +249,7 @@ namespace NLua
 #endif
         static int ModLua(LuaNativeState luaState)
         {
-            var state = new LuaState(luaState);
+            var state = LuaState.FromLuaState(luaState);
             var translator = ObjectTranslatorPool.Instance.Find(state);
             int result = MatchOperator(state, "op_Modulus", translator);
             var exception = translator.GetObject(state, -1) as LuaScriptException;
@@ -269,7 +269,7 @@ namespace NLua
 #endif
         static int UnaryNegationLua(LuaNativeState luaState)
         {
-            var state = new LuaState(luaState);
+            var state = LuaState.FromLuaState(luaState);
             var translator = ObjectTranslatorPool.Instance.Find(state);
             int result = UnaryNegationLua(state, translator);
             var exception = translator.GetObject(state, -1) as LuaScriptException;
@@ -313,7 +313,7 @@ namespace NLua
 #endif
         static int EqualLua(LuaNativeState luaState)
         {
-            var state = new LuaState(luaState);
+            var state = LuaState.FromLuaState(luaState);
             var translator = ObjectTranslatorPool.Instance.Find(state);
             int result = MatchOperator(state, "op_Equality", translator);
             var exception = translator.GetObject(state, -1) as LuaScriptException;
@@ -333,7 +333,7 @@ namespace NLua
 #endif
         static int LessThanLua(LuaNativeState luaState)
         {
-            var state = new LuaState(luaState);
+            var state = LuaState.FromLuaState(luaState);
             var translator = ObjectTranslatorPool.Instance.Find(state);
             int result = MatchOperator(state, "op_LessThan", translator);
             var exception = translator.GetObject(state, -1) as LuaScriptException;
@@ -353,7 +353,7 @@ namespace NLua
 #endif
         static int LessThanOrEqualLua(LuaNativeState luaState)
         {
-            var state = new LuaState(luaState);
+            var state = LuaState.FromLuaState(luaState);
             var translator = ObjectTranslatorPool.Instance.Find(state);
             int result = MatchOperator(state, "op_LessThanOrEqual", translator);
             var exception = translator.GetObject(state, -1) as LuaScriptException;
@@ -405,7 +405,7 @@ namespace NLua
 #endif
         private static int GetMethod(LuaNativeState state)
         {
-            var luaState = new LuaState(state);
+            var luaState = LuaState.FromLuaState(state);
             var translator = ObjectTranslatorPool.Instance.Find(luaState);
             var instance = translator.MetaFunctionsInstance;
             int result = instance.GetMethodInternal(luaState);
@@ -711,7 +711,7 @@ namespace NLua
 #endif
         private static int GetBaseMethod(LuaNativeState state)
         {
-            var luaState = new LuaState(state);
+            var luaState = LuaState.FromLuaState(state);
             var translator = ObjectTranslatorPool.Instance.Find(luaState);
             var instance = translator.MetaFunctionsInstance;
             int result = instance.GetBaseMethodInternal(luaState);
@@ -1016,7 +1016,7 @@ namespace NLua
 #endif
         private static int SetFieldOrProperty(LuaNativeState state)
         {
-            var luaState = new LuaState(state);
+            var luaState = LuaState.FromLuaState(state);
             var translator = ObjectTranslatorPool.Instance.Find(luaState);
             var instance = translator.MetaFunctionsInstance;
             int result = instance.SetFieldOrPropertyInternal(luaState);
@@ -1223,7 +1223,7 @@ namespace NLua
 #endif
         private static int GetClassMethod(LuaNativeState state)
         {
-            var luaState = new LuaState(state);
+            var luaState = LuaState.FromLuaState(state);
             var translator = ObjectTranslatorPool.Instance.Find(luaState);
             var instance = translator.MetaFunctionsInstance;
             int result = instance.GetClassMethodInternal(luaState);
@@ -1271,7 +1271,7 @@ namespace NLua
 #endif
         private static int SetClassFieldOrProperty(LuaNativeState state)
         {
-            var luaState = new LuaState(state);
+            var luaState = LuaState.FromLuaState(state);
             var translator = ObjectTranslatorPool.Instance.Find(luaState);
             var instance = translator.MetaFunctionsInstance;
             int result = instance.SetClassFieldOrPropertyInternal(luaState);
@@ -1305,7 +1305,7 @@ namespace NLua
 #endif
         static int CallDelegate(LuaNativeState state)
         {
-            var luaState = new LuaState(state);
+            var luaState = LuaState.FromLuaState(state);
             var translator = ObjectTranslatorPool.Instance.Find(luaState);
             var instance = translator.MetaFunctionsInstance;
             int result = instance.CallDelegateInternal(luaState);
@@ -1377,7 +1377,7 @@ namespace NLua
 #endif
         private static int CallConstructor(LuaNativeState state)
         {
-            var luaState = new LuaState(state);
+            var luaState = LuaState.FromLuaState(state);
             var translator = ObjectTranslatorPool.Instance.Find(luaState);
             var instance = translator.MetaFunctionsInstance;
             int result = instance.CallConstructorInternal(luaState);

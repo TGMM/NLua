@@ -86,6 +86,12 @@ namespace NLua.Extensions
             return -1;
         }
 
+        public static void NewUData(this LuaState state, int val)
+        {
+            IntPtr pointer = state.NewUserData(Marshal.SizeOf(typeof(int)));
+            Marshal.WriteInt32(pointer, val);
+        }
+
         public static int RawNetObj(this LuaState state, int index)
         {
             IntPtr pointer = state.ToUserData(index);

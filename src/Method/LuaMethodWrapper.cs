@@ -329,7 +329,7 @@ namespace NLua.Method
          */
         int Call(LuaNativeState state)
         {
-            var luaState = new LuaState(state);
+            var luaState = LuaState.FromLuaState(state);
 
             MethodBase methodToCall = _method;
             object targetObject = _target;

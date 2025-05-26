@@ -256,7 +256,7 @@ namespace NLua
 #endif
         private static int LoadAssembly(LuaNativeState luaState)
         {
-            var state = new LuaState(luaState);
+            var state = LuaState.FromLuaState(luaState);
             var translator = ObjectTranslatorPool.Instance.Find(state);
             int result = translator.LoadAssemblyInternal(state);
             var exception = translator.GetObject(state, -1) as LuaScriptException;
@@ -362,7 +362,7 @@ namespace NLua
 #endif
         private static int ImportType(LuaNativeState luaState)
         {
-            var state = new LuaState(luaState);
+            var state = LuaState.FromLuaState(luaState);
             var translator = ObjectTranslatorPool.Instance.Find(state);
             return translator.ImportTypeInternal(state);
         }
@@ -392,7 +392,7 @@ namespace NLua
 #endif
         private static int RegisterTable(LuaNativeState luaState)
         {
-            var state = new LuaState(luaState);
+            var state = LuaState.FromLuaState(luaState);
             var translator = ObjectTranslatorPool.Instance.Find(state);
             int result = translator.RegisterTableInternal(state);
             var exception = translator.GetObject(state, -1) as LuaScriptException;
@@ -461,7 +461,7 @@ namespace NLua
 #endif
         private static int UnregisterTable(LuaNativeState luaState)
         {
-            var state = new LuaState(luaState);
+            var state = LuaState.FromLuaState(luaState);
             var translator = ObjectTranslatorPool.Instance.Find(state);
             int result = translator.UnregisterTableInternal(state);
             var exception = translator.GetObject(state, -1) as LuaScriptException;
@@ -520,7 +520,7 @@ namespace NLua
 #endif
         private static int GetMethodSignature(LuaNativeState luaState)
         {
-            var state = new LuaState(luaState);
+            var state = LuaState.FromLuaState(luaState);
             var translator = ObjectTranslatorPool.Instance.Find(state);
             int result = translator.GetMethodSignatureInternal(state);
             var exception = translator.GetObject(state, -1) as LuaScriptException;
@@ -587,7 +587,7 @@ namespace NLua
 #endif
         private static int GetConstructorSignature(LuaNativeState luaState)
         {
-            var state = new LuaState(luaState);
+            var state = LuaState.FromLuaState(luaState);
             var translator = ObjectTranslatorPool.Instance.Find(state);
             int result = translator.GetConstructorSignatureInternal(state);
             var exception = translator.GetObject(state, -1) as LuaScriptException;
@@ -732,11 +732,11 @@ namespace NLua
                 }
             }
             else
-                luaState.GetMetaTable(metatable);
-
-            // Stores the object index in the Lua list and pushes the
+                luaState.GetMetaTable(metatable);            // Stores the object index in the Lua list and pushes the
             // index into the Lua stack
             luaState.GetMetaTable("luaNet_objects");
+            IntPtr pointer = luaState.NewUserData(Marshal.SizeOf(typeof(int)));
+            Marshal.WriteInt32(pointer, index);
             luaState.PushCopy(-3);
             luaState.Remove(-4);
             luaState.SetMetaTable(-2);
@@ -1151,7 +1151,7 @@ namespace NLua
 #endif
         private static int CType(LuaNativeState luaState)
         {
-            var state = new LuaState(luaState);
+            var state = LuaState.FromLuaState(luaState);
             var translator = ObjectTranslatorPool.Instance.Find(state);
             return translator.CTypeInternal(state);
         }
@@ -1173,7 +1173,7 @@ namespace NLua
 #endif
         private static int EnumFromInt(LuaNativeState luaState)
         {
-            var state = new LuaState(luaState);
+            var state = LuaState.FromLuaState(luaState);
             var translator = ObjectTranslatorPool.Instance.Find(state);
             return translator.EnumFromIntInternal(state);
         }

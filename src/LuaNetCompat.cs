@@ -11,9 +11,9 @@ using LuaDebug = LuaNET.Lua51.Lua.lua_Debug;
 using LuaHookFunction = LuaNET.Lua51.Lua.lua_Hook;
 using System.Runtime.CompilerServices;
 
-public class Lua
+public class Lua : IDisposable
 {
-    private LuaState _luaState;
+    public LuaState _luaState;
     private readonly Lua _mainState;
 
     /// <summary>
@@ -66,25 +66,12 @@ public class Lua
         SetExtraObject(this, true);
     }
 
-    public Lua(LuaState s)
-    {
-        this._luaState = s;
-    }
-
     private IntPtr LuaStateHandle
     {
         get
         {
             return new IntPtr(BitConverter.ToInt64(BitConverter.GetBytes(_luaState.Handle), 0));
         }
-    }
-
-    public static Lua FromIntPtr(IntPtr luaState)
-    {
-        return new Lua(new LuaState
-        {
-            Handle = new UIntPtr(BitConverter.ToUInt64(BitConverter.GetBytes(luaState.ToInt64()), 0))
-        });
     }
 
     private Lua(IntPtr luaThread, Lua mainState)
@@ -108,6 +95,27 @@ public class Lua
 
         SetExtraObject(this, false);
         GC.SuppressFinalize(this);
+    }
+
+    public static Lua FromIntPtr(IntPtr luaStatePtr)
+    {
+        if (luaStatePtr == IntPtr.Zero)
+            return null;
+
+        Lua state = GetExtraObject<Lua>(luaStatePtr);
+        if (state != null && state._luaState.Handle == (UIntPtr)luaStatePtr)
+            return state;
+
+        return new Lua(luaStatePtr, state.MainThread);
+    }
+
+    public static Lua FromLuaState(LuaState luaState)
+    {
+        Lua state = GetExtraObject<Lua>(checked((IntPtr)(long)luaState.Handle.ToUInt64()));
+        if (state != null && state._luaState.Handle == luaState.Handle)
+            return state;
+
+        return new Lua(luaState, state.MainThread);
     }
 
     private void SetExtraObject<T>(T obj, bool weak) where T : class
@@ -252,7 +260,12 @@ public class Lua
 
     public void Close()
     {
+        if (_luaState.Handle == UIntPtr.Zero || _mainState != null)
+            return;
+
         NativeMethods.lua_close(_luaState);
+        _luaState.Handle = UIntPtr.Zero;
+        GC.SuppressFinalize(this);
     }
 
     public void NewTable()
@@ -288,7 +301,7 @@ public class Lua
 
     public Lua ToThread(int index)
     {
-        return new Lua(NativeMethods.lua_tothread(_luaState, index));
+        return Lua.FromLuaState(NativeMethods.lua_tothread(_luaState, index));
     }
 
     public string GetUpValue(int funcIndex, int upIndex)
@@ -481,7 +494,14 @@ public class Lua
 
     public IntPtr ToUserData(int index)
     {
-        return new IntPtr(BitConverter.ToInt64(BitConverter.GetBytes(NativeMethods.lua_touserdata(_luaState, index)), 0));
+        var result = NativeMethods.lua_touserdata(_luaState, index);
+        return checked((IntPtr)(long)result.ToUInt64());
+    }
+
+    public IntPtr NewUserData(int size)
+    {
+        var result = NativeMethods.lua_newuserdata(_luaState, (UIntPtr)size);
+        return checked((IntPtr)(long)result.ToUInt64());
     }
 
     public bool Next(int index) => NativeMethods.lua_next(_luaState, index) != 0;
@@ -547,6 +567,21 @@ public class Lua
     public int GarbageCollector(LuaGC what, int data)
     {
         return NativeMethods.lua_gc(_luaState, (int)what, data);
+    }
+
+    ~Lua()
+    {
+        Dispose(false);
+    }
+
+    public void Dispose(bool disposing)
+    {
+        Close();
+    }
+
+    public void Dispose()
+    {
+        Dispose(true);
     }
 }
 

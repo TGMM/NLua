@@ -347,7 +347,7 @@ namespace NLua
 #endif
         static int PanicCallback(LuaNativeState state)
         {
-            var luaState = new LuaState(state);
+            var luaState = LuaState.FromLuaState(state);
             string reason = string.Format("Unprotected error in call to Lua API ({0})", luaState.ToString(-1, false));
             throw new LuaException(reason);
         }
@@ -1050,7 +1050,7 @@ namespace NLua
 #endif
         static void DebugHookCallback(LuaNativeState luaState, LuaDebug luaDebug)
         {
-            var state = new LuaState(luaState);
+            var state = LuaState.FromLuaState(luaState);
 
             state.GetStack(0, luaDebug);
 
