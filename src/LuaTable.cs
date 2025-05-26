@@ -1,5 +1,5 @@
 ﻿using System.Collections;
-
+using NLua.Extensions;
 using LuaState = NLua.LuaNetCompat.Lua;
 
 namespace NLua

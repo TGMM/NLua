@@ -14,7 +14,7 @@ namespace NLua.Extensions
             if (!state.GetMetaTable(index))
                 return false;
 
-            state.PushLightUserData(tag);
+            state.PushLightUserData((UIntPtr)tag);
             state.RawGet(-2);
             bool isNotNil = !state.IsNil(-1);
             state.SetTop(-3);
@@ -23,7 +23,7 @@ namespace NLua.Extensions
 
         public static void PopGlobalTable(this LuaState luaState)
         {
-            luaState.RawSetInteger(LuaRegistry.Index, (long)LuaRegistryIndex.Globals);
+            luaState.RawSetInteger(LuaRegistry.Index, (int)LuaRegistryIndex.Globals);
         }
 
         public static void GetRef(this LuaState luaState, int reference)
@@ -88,7 +88,7 @@ namespace NLua.Extensions
 
         public static void NewUData(this LuaState state, int val)
         {
-            IntPtr pointer = state.NewUserData(Marshal.SizeOf(typeof(int)));
+            IntPtr pointer = state.NewUserData((ulong)Marshal.SizeOf(typeof(int)));
             Marshal.WriteInt32(pointer, val);
         }
 

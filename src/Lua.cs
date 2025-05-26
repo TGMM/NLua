@@ -1007,12 +1007,12 @@ namespace NLua
 
         public int GetStack(int level, ref LuaDebug ar)
         {
-            return _luaState.GetStack(level, ar);
+            return _luaState.GetStack(level, ref ar);
         }
 
         public bool GetInfo(string what, ref LuaDebug ar)
         {
-            return _luaState.GetInfo(what, ar);
+            return _luaState.GetInfo(what, ref ar);
         }
 
         /// <summary>
@@ -1052,9 +1052,9 @@ namespace NLua
         {
             var state = LuaState.FromLuaState(luaState);
 
-            state.GetStack(0, luaDebug);
+            state.GetStack(0, ref luaDebug);
 
-            if (!state.GetInfo("Snlu", luaDebug))
+            if (!state.GetInfo("Snlu", ref luaDebug))
                 return;
 
             ObjectTranslator translator = ObjectTranslatorPool.Instance.Find(state);

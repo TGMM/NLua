@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using static NLua.LuaNetCompat.Lua;
 using NLua.Method;
 using NLua.Extensions;
+using NLua.LuaNetCompat;
 
 namespace NLua
 {

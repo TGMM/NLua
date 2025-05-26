@@ -244,17 +244,81 @@ public class Lua : IDisposable
         return NativeMethods.lua_checkstack(_luaState, nExtraSlots) != 0;
     }
 
+    public LuaType RawGetP(int i, UIntPtr p)
+    {
+        int abs_i = AbsIndex(i);
+        NativeMethods.lua_pushlightuserdata(_luaState, p);
+        NativeMethods.lua_rawget(_luaState, abs_i);
+        return (LuaType)NativeMethods.lua_type(_luaState, -1);
+    }
+
+    public void RawSetP(int i, UIntPtr p)
+    {
+        int abs_i = AbsIndex(i);
+        NativeMethods.luaL_checkstack(_luaState, 1, "not enough stack slots");
+        NativeMethods.lua_pushlightuserdata(_luaState, p);
+        NativeMethods.lua_insert(_luaState, -2);
+        NativeMethods.lua_rawset(_luaState, abs_i);
+    }
+
+    public void CallLua(string code, ulong len, int nargs, int nret)
+    {
+        RawGetP(NativeMethods.LUA_REGISTRYINDEX, (UIntPtr)code.GetHashCode());
+        if ((LuaType)NativeMethods.lua_type(_luaState, -1) != LuaType.Function)
+        {
+            NativeMethods.lua_pop(_luaState, 1);
+            if (NativeMethods.luaL_loadbuffer(_luaState, code, len, "=none") != 0)
+                NativeMethods.lua_error(_luaState);
+            NativeMethods.lua_pushvalue(_luaState, -1);
+            RawSetP(NativeMethods.LUA_REGISTRYINDEX, (UIntPtr)code.GetHashCode());
+        }
+        NativeMethods.lua_insert(_luaState, -nargs - 1);
+        NativeMethods.lua_call(_luaState, nargs, nret);
+    }
+
+    private const string CompareCode = """
+    local a,b=...
+    return a<=b
+    """;
+
     /// <summary>
     /// Compares two Lua values. Returns 1 if the value at index index1 satisfies op when compared with the value at index index2
     /// </summary>
-    /// <param name="index1"></param>
-    /// <param name="index2"></param>
+    /// <param name="idx1"></param>
+    /// <param name="idx2"></param>
     /// <param name="comparison"></param>
     /// <returns></returns>
-    // public bool Compare(int index1, int index2, LuaCompare comparison)
-    // {
-    //     return NativeMethods.lua_compare(_luaState, index1, index2, (int)comparison) != 0;
-    // }
+    public bool Compare(int idx1, int idx2, LuaCompare comparison)
+    {
+        int result = 0;
+        switch (comparison)
+        {
+            case LuaCompare.Equal:
+                return NativeMethods.lua_equal(_luaState, idx1, idx2) != 0;
+            case LuaCompare.LessThan:
+                return NativeMethods.lua_lessthan(_luaState, idx1, idx2) != 0;
+            case LuaCompare.LessOrEqual:
+                NativeMethods.luaL_checkstack(_luaState, 5, "not enough stack slots");
+                idx1 = AbsIndex(idx1);
+                idx2 = AbsIndex(idx2);
+                NativeMethods.lua_pushvalue(_luaState, idx1);
+                NativeMethods.lua_pushvalue(_luaState, idx2);
+                CallLua(CompareCode, (ulong)Encoding.GetByteCount(CompareCode) - 1, 2, 1);
+                result = NativeMethods.lua_toboolean(_luaState, -1);
+                NativeMethods.lua_pop(_luaState, 1);
+                return result != 0;
+            default:
+                NativeMethods.luaL_error(_luaState, "invalid 'op' argument for lua_compare");
+                break;
+        }
+
+        return result != 0;
+    }
+
+    public bool AreEqual(int ref1, int ref2)
+    {
+        return Compare(ref1, ref2, LuaCompare.Equal);
+    }
 
     /// <summary>
     /// Concatenates the n values at the top of the stack, pops them, and leaves the result at the top. If n is 1, the result is the single value on the stack (that is, the function does nothing);
@@ -483,11 +547,10 @@ public class Lua : IDisposable
     /// <param name="functionIndex"></param>
     /// <param name="n"></param>
     /// <returns>Returns the type of the pushed value. </returns>
-    // public string GetUpValue(int functionIndex, int n)
-    // {
-    //     IntPtr ptr = NativeMethods.lua_getupvalue(_luaState, functionIndex, n);
-    //     return Marshal.PtrToStringAnsi(ptr);
-    // }
+    public string GetUpValue(int functionIndex, int n)
+    {
+        return NativeMethods.lua_getupvalue(_luaState, functionIndex, n);
+    }
 
 
     /// <summary>
@@ -509,7 +572,7 @@ public class Lua : IDisposable
     /// Moves the top element into the given valid index, shifting up the elements above this index to open space. This function cannot be called with a pseudo-index, because a pseudo-index is not an actual stack position. 
     /// </summary>
     /// <param name="index"></param>
-    // public void Insert(int index) => NativeMethods.lua_rotate(_luaState, index, 1);
+    public void Insert(int index) => Rotate(index, 1);
 
     /// <summary>
     /// Returns  if the value at the given index is a boolean
@@ -537,7 +600,18 @@ public class Lua : IDisposable
     /// </summary>
     /// <param name="index"></param>
     /// <returns></returns>
-    // public bool IsInteger(int index) => NativeMethods.lua_isinteger(_luaState, index) != 0;
+    public bool IsInteger(int index)
+    {
+        if ((LuaType)NativeMethods.lua_type(_luaState, index) == LuaType.Number)
+        {
+            double n = NativeMethods.lua_tonumber(_luaState, index);
+            long i = NativeMethods.lua_tointeger(_luaState, index);
+            if (i == n)
+                return true;
+        }
+
+        return false;
+    }
 
     /// <summary>
     /// Returns  if the value at the given index is light user data
@@ -666,20 +740,20 @@ public class Lua : IDisposable
     /// <param name="size"></param>
     /// <param name="uv"></param>
     /// <returns></returns>
-    // public IntPtr NewIndexedUserData(int size, int uv)
-    // {
-    //     return NativeMethods.lua_newuserdatauv(_luaState, (UIntPtr)size, uv);
-    // }
+    public IntPtr NewIndexedUserData(ulong size, int uv)
+    {
+        return (IntPtr)NativeMethods.lua_newuserdata(_luaState, size);
+    }
 
     /// <summary>
     /// Compatibility NewIndexedUserData with constant parameter
     /// </summary>
     /// <param name="size"></param>
     /// <returns></returns>
-    // public IntPtr NewUserData(int size)
-    // {
-    //     return NewIndexedUserData(size, 1);
-    // }
+    public IntPtr NewUserData(ulong size)
+    {
+        return NewIndexedUserData(size, 1);
+    }
 
     /// <summary>
     /// Pops a key from the stack, and pushes a key–value pair from the table at the given index (the "next" pair after the given key).
@@ -694,10 +768,12 @@ public class Lua : IDisposable
     /// <param name="arguments"></param>
     /// <param name="results"></param>
     /// <param name="errorFunctionIndex"></param>
-    // public LuaStatus PCall(int arguments, int results, int errorFunctionIndex)
-    // {
-    //     return (LuaStatus)NativeMethods.lua_pcallk(_luaState, arguments, results, errorFunctionIndex, IntPtr.Zero, IntPtr.Zero);
-    // }
+    public LuaStatus PCall(int arguments, int results, int errorFunctionIndex)
+    {
+        return (LuaStatus)NativeMethods.lua_pcall(_luaState, arguments, results, errorFunctionIndex);
+
+        // return (LuaStatus)NativeMethods.lua_pcallk(_luaState, arguments, results, errorFunctionIndex, IntPtr.Zero, IntPtr.Zero);
+    }
 
     /// <summary>
     /// This function behaves exactly like lua_pcall, but allows the called function to yield
@@ -815,7 +891,7 @@ public class Lua : IDisposable
             return;
         }
 
-        NativeMethods.lua_pushlstring(_luaState, Encoding.GetString(buffer), (UIntPtr)buffer.Length);
+        NativeMethods.lua_pushlstring(_luaState, Encoding.GetString(buffer), (ulong)buffer.Length);
     }
 
     /// <summary>
@@ -1028,11 +1104,11 @@ public class Lua : IDisposable
     /// Removes the element at the given valid index, shifting down the elements above this index to fill the gap. This function cannot be called with a pseudo-index, because a pseudo-index is not an actual stack position. 
     /// </summary>
     /// <param name="index"></param>
-    // public void Remove(int index)
-    // {
-    //     Rotate(index, -1);
-    //     Pop(1);
-    // }
+    public void Remove(int index)
+    {
+        Rotate(index, -1);
+        Pop(1);
+    }
 
     /// <summary>
     /// Moves the top element into the given valid index without shifting any element (therefore replacing the value at that given index), and then pops the top element.
@@ -1090,15 +1166,37 @@ public class Lua : IDisposable
     //     return NativeMethods.lua_resetthread(_luaState);
     // }
 
+    public void Reverse(int a, int b)
+    {
+        for (; a < b; ++a, --b)
+        {
+            NativeMethods.lua_pushvalue(_luaState, a);
+            NativeMethods.lua_pushvalue(_luaState, b);
+            NativeMethods.lua_replace(_luaState, a);
+            NativeMethods.lua_replace(_luaState, b);
+        }
+    }
+
     /// <summary>
     ///  Rotates the stack elements between the valid index idx and the top of the stack. The elements are rotated n positions in the direction of the top, for a positive n, or -n positions in the direction of the bottom, for a negative n. The absolute value of n must not be greater than the size of the slice being rotated. This function cannot be called with a pseudo-index, because a pseudo-index is not an actual stack position. 
     /// </summary>
     /// <param name="index"></param>
     /// <param name="n"></param>
-    // public void Rotate(int index, int n)
-    // {
-    //     NativeMethods.lua_rotate(_luaState, index, n);
-    // }
+    public void Rotate(int idx, int n)
+    {
+        idx = AbsIndex(idx);
+        int n_elems = NativeMethods.lua_gettop(_luaState) - idx + 1;
+        if (n < 0)
+            n += n_elems;
+        if (n > 0 && n < n_elems)
+        {
+            NativeMethods.luaL_checkstack(_luaState, 2, "not enough stack slots available");
+            n = n_elems - n;
+            Reverse(idx, idx + n - 1);
+            Reverse(idx + n, idx + n_elems - 1);
+            Reverse(idx, idx + n_elems - 1);
+        }
+    }
 
     /// <summary>
     /// Changes the allocator function of a given state to f with user data ud. 
@@ -1278,18 +1376,34 @@ public class Lua : IDisposable
     //     NativeMethods.lua_toclose(_luaState, index);
     // }
 
+    public long ToIntegerX(int i, out bool isInteger)
+    {
+        double n = ToNumberX(i, out bool ok);
+        if (ok)
+        {
+            if (n == (long)n)
+            {
+                isInteger = true;
+                return (long)n;
+            }
+        }
+        isInteger = false;
+
+        return 0;
+    }
+
     /// <summary>
     /// Converts the Lua value at the given index to the signed integral type lua_Integer. The Lua value must be an integer, or a number or string convertible to an integer (see §3.4.3); otherwise, lua_tointegerx returns 0. 
     /// </summary>
     /// <param name="index"></param>
     /// <returns></returns>
-    //     public long ToInteger(int index)
-    //     {
-    // #pragma warning disable IDE0018 // Inline variable declaration
-    //         int isNum;
-    // #pragma warning restore IDE0018 // Inline variable declaration
-    //         return NativeMethods.lua_tointegerx(_luaState, index, out isNum);
-    //     }
+    public long ToInteger(int index)
+    {
+#pragma warning disable IDE0018 // Inline variable declaration
+        bool isNum;
+#pragma warning restore IDE0018 // Inline variable declaration
+        return ToIntegerX(index, out isNum);
+    }
 
     /// <summary>
     /// Converts the Lua value at the given index to the signed integral type lua_Integer. The Lua value must be an integer, or a number or string convertible to an integer (see §3.4.3); otherwise, lua_tointegerx returns 0. 
@@ -1403,30 +1517,35 @@ public class Lua : IDisposable
         return Encoding.GetString(buffer);
     }
 
+    public double ToNumberX(int i, out bool isNum)
+    {
+        double n = NativeMethods.lua_tonumber(_luaState, i);
+        isNum = n != 0 || NativeMethods.lua_isnumber(_luaState, i) != 0;
+        return n;
+    }
+
     /// <summary>
     /// Converts the Lua value at the given index to a C# double
     /// </summary>
     /// <param name="index"></param>
     /// <returns></returns>
-    // public double ToNumber(int index)
-    // {
-    //     int isNum;
-    //     return NativeMethods.lua_tonumberx(_luaState, index, out isNum);
-    // }
+    public double ToNumber(int index)
+    {
+        return ToNumberX(index, out bool isNum);
+    }
 
     /// <summary>
     /// Converts the Lua value at the given index to a C# double?
     /// </summary>
     /// <param name="index"></param>
     /// <returns></returns>
-    // public double? ToNumberX(int index)
-    // {
-    //     int isNumber;
-    //     double value = NativeMethods.lua_tonumberx(_luaState, index, out isNumber);
-    //     if (isNumber != 0)
-    //         return value;
-    //     return null;
-    // }
+    public double? ToNumberX(int index)
+    {
+        double value = ToNumberX(index, out bool isNumber);
+        if (isNumber)
+            return value;
+        return null;
+    }
 
     /// <summary>
     ///  Converts the value at the given index to a generic C pointer (void*). The value can be a userdata, a table, a thread, or a function; otherwise, lua_topointer returns NULL. Different objects will give different pointers. There is no way to convert the pointer back to its original value.
@@ -1766,22 +1885,22 @@ public class Lua : IDisposable
     /// </summary>
     /// <param name="file"></param>
     /// <returns>It returns false if there are no errors or true in case of errors. </returns>
-    // public bool DoFile(string file)
-    // {
-    //     bool hasError = LoadFile(file) != LuaStatus.OK || PCall(0, -1, 0) != LuaStatus.OK;
-    //     return hasError;
-    // }
+    public bool DoFile(string file)
+    {
+        bool hasError = LoadFile(file) != LuaStatus.OK || PCall(0, -1, 0) != LuaStatus.OK;
+        return hasError;
+    }
 
     /// <summary>
     /// Loads and runs the given string
     /// </summary>
     /// <param name="file"></param>
     /// <returns>It returns false if there are no errors or true in case of errors. </returns>
-    // public bool DoString(string file)
-    // {
-    //     bool hasError = LoadString(file) != LuaStatus.OK || PCall(0, -1, 0) != LuaStatus.OK;
-    //     return hasError;
-    // }
+    public bool DoString(string file)
+    {
+        bool hasError = LoadString(file) != LuaStatus.OK || PCall(0, -1, 0) != LuaStatus.OK;
+        return hasError;
+    }
 
     /// <summary>
     /// Raises an error. The error message format is given by fmt plus any extra arguments
@@ -1855,6 +1974,33 @@ public class Lua : IDisposable
     /// <returns></returns>
     // public long Length(int index) => NativeMethods.luaL_len(_luaState, index);
 
+    public LuaStatus CheckMode(string mode, string modeName, LuaStatus err)
+    {
+        if (mode != null && !mode.Contains(modeName[0]))
+        {
+            NativeMethods.lua_pushstring(_luaState, $"attempt to load a {modeName} chunk (mode is '{mode}')");
+            return err;
+        }
+
+        return LuaStatus.OK;
+    }
+
+    public LuaStatus LoadBufferX(string buff, ulong sz, string name, string mode)
+    {
+        LuaStatus status = LuaStatus.OK;
+        if (sz > 0 && buff[0] == NativeMethods.LUA_SIGNATURE[0])
+        {
+            status = CheckMode(mode, "binary", LuaStatus.ErrSyntax);
+        }
+        else
+        {
+            status = CheckMode(mode, "text", LuaStatus.ErrSyntax);
+        }
+        if (status != LuaStatus.OK)
+            return status;
+        return (LuaStatus)NativeMethods.luaL_loadbuffer(_luaState, buff, sz, name);
+    }
+
     /// <summary>
     /// Loads a buffer as a Lua chunk
     /// </summary>
@@ -1862,33 +2008,45 @@ public class Lua : IDisposable
     /// <param name="name"></param>
     /// <param name="mode"></param>
     /// <returns></returns>
-    // public LuaStatus LoadBuffer(byte[] buffer, string name, string mode)
-    // {
-    //     if (buffer == null)
-    //         throw new ArgumentNullException(nameof(buffer), "buffer shouldn't be null");
+    public LuaStatus LoadBuffer(string buffer, string name, string mode)
+    {
+        if (buffer == null)
+            throw new ArgumentNullException(nameof(buffer), "buffer shouldn't be null");
 
-    //     return (LuaStatus)NativeMethods.luaL_loadbufferx(_luaState, buffer, (UIntPtr)buffer.Length, name, mode);
-    // }
+        return LoadBufferX(buffer, (ulong)Encoding.GetByteCount(buffer), name, mode);
+    }
+
+    /// <summary>
+    /// Loads a buffer as a Lua chunk
+    /// </summary>
+    /// <param name="buffer"></param>
+    /// <param name="name"></param>
+    /// <param name="mode"></param>
+    /// <returns></returns>
+    public LuaStatus LoadBuffer(byte[] buffer, string name, string mode)
+    {
+        return LoadBufferX(Encoding.GetString(buffer), (ulong)buffer.Length, name, mode);
+    }
 
     /// <summary>
     /// </summary>
     /// <param name="buffer"></param>
     /// <param name="name"></param>
     /// <returns></returns>
-    // public LuaStatus LoadBuffer(byte[] buffer, string name)
-    // {
-    //     return LoadBuffer(buffer, name, null);
-    // }
+    public LuaStatus LoadBuffer(byte[] buffer, string name)
+    {
+        return LoadBuffer(buffer, name, null);
+    }
 
     /// <summary>
     /// Loads a buffer as a Lua chunk
     /// </summary>
     /// <param name="buffer"></param>
     /// <returns></returns>
-    // public LuaStatus LoadBuffer(byte[] buffer)
-    // {
-    //     return LoadBuffer(buffer, null, null);
-    // }
+    public LuaStatus LoadBuffer(byte[] buffer)
+    {
+        return LoadBuffer(buffer, null, null);
+    }
 
     /// <summary>
     /// Loads a string as a Lua chunk
@@ -1896,21 +2054,21 @@ public class Lua : IDisposable
     /// <param name="chunk"></param>
     /// <param name="name"></param>
     /// <returns></returns>
-    // public LuaStatus LoadString(string chunk, string name)
-    // {
-    //     byte[] buffer = Encoding.GetBytes(chunk);
-    //     return LoadBuffer(buffer, name);
-    // }
+    public LuaStatus LoadString(string chunk, string name)
+    {
+        byte[] buffer = Encoding.GetBytes(chunk);
+        return LoadBuffer(buffer, name);
+    }
 
     /// <summary>
     /// Loads a string as a Lua chunk
     /// </summary>
     /// <param name="chunk"></param>
     /// <returns></returns>
-    // public LuaStatus LoadString(string chunk)
-    // {
-    //     return LoadString(chunk, null);
-    // }
+    public LuaStatus LoadString(string chunk)
+    {
+        return LoadString(chunk, null);
+    }
 
     /// <summary>
     /// Loads a file as a Lua chunk. This function uses lua_load to load the chunk in the file named filename
@@ -1928,10 +2086,10 @@ public class Lua : IDisposable
     /// </summary>
     /// <param name="file"></param>
     /// <returns>Return the status</returns>
-    // public LuaStatus LoadFile(string file)
-    // {
-    //     return LoadFile(file, null);
-    // }
+    public LuaStatus LoadFile(string file)
+    {
+        return (LuaStatus)NativeMethods.luaL_loadfile(_luaState, file);
+    }
 
     /// <summary>
     /// Creates a new table and registers there the functions in list library. 
@@ -2210,7 +2368,7 @@ public enum LuaCompare
     /// <summary>
     ///  compares for less than 
     /// </summary>
-    LessThen = 1,
+    LessThan = 1,
     /// <summary>
     /// compares for less or equal 
     /// </summary>

@@ -710,7 +710,7 @@ namespace NLua
                     luaState.PushString("cache");
                     luaState.NewTable();
                     luaState.RawSet(-3);
-                    luaState.PushLightUserData(_tagPtr);
+                    luaState.PushLightUserData((UIntPtr)_tagPtr);
                     luaState.PushNumber(1);
                     luaState.RawSet(-3);
                     luaState.PushString("__index");
@@ -735,7 +735,7 @@ namespace NLua
                 luaState.GetMetaTable(metatable);            // Stores the object index in the Lua list and pushes the
             // index into the Lua stack
             luaState.GetMetaTable("luaNet_objects");
-            IntPtr pointer = luaState.NewUserData(Marshal.SizeOf(typeof(int)));
+            IntPtr pointer = luaState.NewUserData((ulong)Marshal.SizeOf(typeof(int)));
             Marshal.WriteInt32(pointer, index);
             luaState.PushCopy(-3);
             luaState.Remove(-4);

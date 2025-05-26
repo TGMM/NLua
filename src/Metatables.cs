@@ -4,8 +4,6 @@ using System.Reflection;
 using System.Diagnostics;
 using System.Collections.Generic;
 
-using static NLua.LuaNetCompat.Lua;
-
 using NLua.Method;
 using NLua.Extensions;
 
@@ -17,6 +15,7 @@ using LuaState = NLua.LuaNetCompat.Lua;
 using LuaNativeState = LuaNET.Lua51.lua_State;
 using LuaNativeFunction = LuaNET.Lua51.Lua.lua_CFunction;
 using NLua.Exceptions;
+using NLua.LuaNetCompat;
 
 namespace NLua
 {
