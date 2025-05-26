@@ -24,7 +24,7 @@ public class Lua : IDisposable
     /// <summary>
     /// Internal Lua handle pointer.
     /// </summary>
-    public IntPtr Handle => (IntPtr)_luaState.Handle;
+    public IntPtr Handle => (IntPtr)(long)_luaState.Handle.ToUInt64();
 
     /// <summary>
     /// Encoding for the string conversions
@@ -37,7 +37,7 @@ public class Lua : IDisposable
     ///  Each new thread has this area initialized with a copy of the area of the main thread. 
     /// </summary>
     /// <returns></returns>
-    public IntPtr ExtraSpace => (IntPtr)_luaState.Handle - IntPtr.Size;
+    public IntPtr ExtraSpace => Handle - IntPtr.Size;
 
     /// <summary>
     /// Get the main thread object, if the object is the main thread will be equal this
@@ -98,7 +98,7 @@ public class Lua : IDisposable
             return null;
 
         Lua state = GetExtraObject<Lua>(luaStatePtr);
-        if (state != null && (IntPtr)state._luaState.Handle == luaStatePtr)
+        if (state != null && (IntPtr)(long)state._luaState.Handle.ToUInt64() == luaStatePtr)
             return state;
 
         LuaState luaState = new LuaState { Handle = (UIntPtr)luaStatePtr.ToInt64() };
@@ -108,7 +108,7 @@ public class Lua : IDisposable
 
     public static Lua FromLuaState(LuaState luaState)
     {
-        Lua state = GetExtraObject<Lua>((IntPtr)luaState.Handle);
+        Lua state = GetExtraObject<Lua>((IntPtr)(long)luaState.Handle.ToUInt64());
         if (state != null && state._luaState.Handle == luaState.Handle)
             return state;
 
@@ -155,14 +155,13 @@ public class Lua : IDisposable
         Dispose(true);
     }
 
-    private void SetExtraObject<T>(T obj, bool weak) where T : class
+    public void SetExtraObject<T>(T obj, bool weak) where T : class
     {
         var handle = GCHandle.Alloc(obj, weak ? GCHandleType.Weak : GCHandleType.Normal);
-        IntPtr extraSpace = (IntPtr)_luaState.Handle - IntPtr.Size;
-        Marshal.WriteIntPtr(extraSpace, GCHandle.ToIntPtr(handle));
+        Marshal.WriteIntPtr(ExtraSpace, GCHandle.ToIntPtr(handle));
     }
 
-    private static T GetExtraObject<T>(IntPtr luaState) where T : class
+    public static T GetExtraObject<T>(IntPtr luaState) where T : class
     {
         IntPtr extraSpace = luaState - IntPtr.Size;
         IntPtr pointer = Marshal.ReadIntPtr(extraSpace);
@@ -742,7 +741,7 @@ public class Lua : IDisposable
     /// <returns></returns>
     public IntPtr NewIndexedUserData(ulong size, int uv)
     {
-        return (IntPtr)NativeMethods.lua_newuserdata(_luaState, size);
+        return (IntPtr)(long)NativeMethods.lua_newuserdata(_luaState, size).ToUInt64();
     }
 
     /// <summary>
@@ -1611,7 +1610,7 @@ public class Lua : IDisposable
     /// <returns></returns>
     public IntPtr ToUserData(int index)
     {
-        return (IntPtr)NativeMethods.lua_touserdata(_luaState, index);
+        return (IntPtr)(long)NativeMethods.lua_touserdata(_luaState, index).ToUInt64();
     }
 
 
@@ -2497,7 +2496,8 @@ public enum LuaRegistry
     /// <summary>
     /// pseudo-index used by registry table
     /// </summary>
-    Index = -1_000_000 - 1000
+    // Index = -1_000_000 - 1000
+    Index = NativeMethods.LUA_REGISTRYINDEX
 }
 
 /// <summary>
