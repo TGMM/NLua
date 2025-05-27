@@ -316,17 +316,15 @@ namespace NLua
                 _luaState.NewTable();
                 _luaState.SetGlobal("luanet");
             }
-            _luaState.PushGlobalTable();
             _luaState.GetGlobal("luanet");
             _luaState.PushString("getmetatable");
             _luaState.GetGlobal("getmetatable");
             _luaState.SetTable(-3);
-            _luaState.PopGlobalTable();
+            _luaState.Pop(1);
             _translator = new ObjectTranslator(this, _luaState);
 
             ObjectTranslatorPool.Instance.Add(_luaState, _translator);
 
-            _luaState.PopGlobalTable();
             _luaState.DoString(InitLuanet);
         }
 

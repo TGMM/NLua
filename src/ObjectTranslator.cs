@@ -184,6 +184,18 @@ namespace NLua
             luaState.SetGlobal("ctype");
             luaState.PushCFunction(_enumFromIntFunction);
             luaState.SetGlobal("enum");
+
+            luaState.DoString("""
+            luanet.get_object_member = get_object_member
+            luanet.import_type = import_type
+            luanet.load_assembly = load_assembly
+            luanet.make_object = make_object
+            luanet.free_object = free_object
+            luanet.get_method_bysig = get_method_bysig
+            luanet.get_constructor_bysig = get_constructor_bysig
+            luanet.ctype = ctype
+            luanet.enum = enum
+            """);
         }
 
         /*
