@@ -155,16 +155,84 @@ public class Lua : IDisposable
         Dispose(true);
     }
 
+    public static UIntPtr GetExtraSpace(LuaState luaState)
+    {
+        ulong luaExtraspace = (ulong)UIntPtr.Size; // Size of the extra space in bytes
+        NativeMethods.luaL_checkstack(luaState, 4, "not enough stack slots available");
+        NativeMethods.lua_pushliteral(luaState, "__compat53_extraspace");
+        NativeMethods.lua_pushvalue(luaState, -1);
+        NativeMethods.lua_rawget(luaState, NativeMethods.LUA_REGISTRYINDEX);
+        if (NativeMethods.lua_istable(luaState, -1) != 1)
+        {
+            NativeMethods.lua_pop(luaState, 1);
+            NativeMethods.lua_createtable(luaState, 0, 2);
+            NativeMethods.lua_createtable(luaState, 0, 1);
+            NativeMethods.lua_pushliteral(luaState, "k");
+            NativeMethods.lua_setfield(luaState, -2, "__mode");
+            NativeMethods.lua_setmetatable(luaState, -2);
+            NativeMethods.lua_pushvalue(luaState, -2);
+            NativeMethods.lua_pushvalue(luaState, -2);
+            NativeMethods.lua_rawset(luaState, NativeMethods.LUA_REGISTRYINDEX);
+        }
+        NativeMethods.lua_replace(luaState, -2);
+        int is_main = NativeMethods.lua_pushthread(luaState);
+        NativeMethods.lua_rawget(luaState, -2);
+        UIntPtr ptr = NativeMethods.lua_touserdata(luaState, -1);
+        if (ptr == UIntPtr.Zero)
+        {
+            NativeMethods.lua_pop(luaState, 1);
+            ptr = NativeMethods.lua_newuserdata(luaState, luaExtraspace);
+            if (is_main != 0)
+            {
+                Marshal.WriteIntPtr((IntPtr)(long)ptr.ToUInt64(), IntPtr.Zero);
+                // memset(ptr, '\0', LUA_EXTRASPACE);
+                NativeMethods.lua_pushthread(luaState);
+                NativeMethods.lua_pushvalue(luaState, -2);
+                NativeMethods.lua_rawset(luaState, -4);
+                NativeMethods.lua_pushboolean(luaState, 1);
+                NativeMethods.lua_pushvalue(luaState, -2);
+                NativeMethods.lua_rawset(luaState, -4);
+            }
+            else
+            {
+                NativeMethods.lua_pushboolean(luaState, 1);
+                NativeMethods.lua_rawget(luaState, -3);
+                UIntPtr mptr = NativeMethods.lua_touserdata(luaState, -1);
+                if (mptr != UIntPtr.Zero)
+                {
+                    // memcpy(ptr, mptr, LUA_EXTRASPACE);
+                    Marshal.WriteIntPtr((IntPtr)(long)ptr.ToUInt64(), Marshal.ReadIntPtr((IntPtr)(long)mptr.ToUInt64()));
+                }
+                else
+                {
+                    // memset(ptr, '\0', LUA_EXTRASPACE);
+                    Marshal.WriteIntPtr((IntPtr)(long)ptr.ToUInt64(), IntPtr.Zero);
+                }
+                NativeMethods.lua_pop(luaState, 1);
+                NativeMethods.lua_pushthread(luaState);
+                NativeMethods.lua_pushvalue(luaState, -2);
+                NativeMethods.lua_rawset(luaState, -4);
+            }
+        }
+        NativeMethods.lua_pop(luaState, 2);
+        return ptr;
+    }
+
     public void SetExtraObject<T>(T obj, bool weak) where T : class
     {
         var handle = GCHandle.Alloc(obj, weak ? GCHandleType.Weak : GCHandleType.Normal);
-        Marshal.WriteIntPtr(ExtraSpace, GCHandle.ToIntPtr(handle));
+        var extraSpace = (IntPtr)(long)GetExtraSpace(_luaState).ToUInt64();
+        var handlePtr = GCHandle.ToIntPtr(handle);
+        Marshal.WriteIntPtr(extraSpace, handlePtr);
     }
 
     public static T GetExtraObject<T>(IntPtr luaState) where T : class
     {
-        IntPtr extraSpace = luaState - IntPtr.Size;
-        IntPtr pointer = Marshal.ReadIntPtr(extraSpace);
+        if (luaState == IntPtr.Zero)
+            return null;
+
+        var extraSpace = (IntPtr)(long)GetExtraSpace(new LuaState { Handle = (UIntPtr)luaState }).ToUInt64();
+        var pointer = Marshal.ReadIntPtr(extraSpace);
         var handle = GCHandle.FromIntPtr(pointer);
         if (!handle.IsAllocated)
             return null;
