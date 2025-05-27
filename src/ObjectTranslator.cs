@@ -735,8 +735,7 @@ namespace NLua
                 luaState.GetMetaTable(metatable);            // Stores the object index in the Lua list and pushes the
             // index into the Lua stack
             luaState.GetMetaTable("luaNet_objects");
-            IntPtr pointer = luaState.NewUserData((ulong)Marshal.SizeOf(typeof(int)));
-            Marshal.WriteInt32(pointer, index);
+            luaState.NewUData(index);
             luaState.PushCopy(-3);
             luaState.Remove(-4);
             luaState.SetMetaTable(-2);

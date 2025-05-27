@@ -42,7 +42,7 @@ namespace NLua
         private LuaHookFunction _hookCallback;
         #endregion
         #region Globals auto-complete
-        private readonly LuaGlobals _globals = new LuaGlobals();
+        private readonly LuaGlobals _globals = new();
         #endregion
         private LuaState _luaState;
         /// <summary>

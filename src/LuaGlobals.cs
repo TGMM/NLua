@@ -31,8 +31,8 @@ namespace NLua
 
     public class LuaGlobals
     {
-        private List<string> _globals = new List<string>();
-        private List<LuaGlobalEntry> _knownTypes = new List<LuaGlobalEntry>();
+        private List<string> _globals = [];
+        private List<LuaGlobalEntry> _knownTypes = [];
 
         public bool _globalsSorted = false;
 

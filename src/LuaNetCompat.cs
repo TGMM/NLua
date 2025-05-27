@@ -20,6 +20,11 @@ public class Lua : IDisposable
 {
     private LuaState _luaState;
     private readonly Lua _mainState;
+    
+    /// <summary>
+    /// Internal Lua state.
+    /// </summary>
+    public LuaState GetInternalState => _luaState;
 
     /// <summary>
     /// Internal Lua handle pointer.
@@ -898,7 +903,7 @@ public class Lua : IDisposable
     /// <param name="function"></param>
     public void PushCFunction(LuaNativeFunction function)
     {
-        PushCClosure(function, 0);
+        NativeMethods.lua_pushcfunction(_luaState, function);
     }
 
     /// <summary>
@@ -1965,8 +1970,10 @@ public class Lua : IDisposable
     /// <returns>It returns false if there are no errors or true in case of errors. </returns>
     public bool DoString(string file)
     {
-        bool hasError = LoadString(file) != LuaStatus.OK || PCall(0, -1, 0) != LuaStatus.OK;
-        return hasError;
+        bool doStringError = NativeMethods.luaL_dostring(_luaState, file) == 1;
+        bool pCallError = NativeMethods.lua_pcall(_luaState, 0, NativeMethods.LUA_MULTRET, 0) == 1;
+
+        return doStringError || pCallError;
     }
 
     /// <summary>

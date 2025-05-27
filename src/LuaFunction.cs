@@ -3,6 +3,7 @@ using NLua.LuaNetCompat;
 
 using LuaState = NLua.LuaNetCompat.Lua;
 using LuaNativeFunction = LuaNET.Lua51.Lua.lua_CFunction;
+using NativeMethods = LuaNET.Lua51.Lua;
 
 namespace NLua
 {
@@ -12,7 +13,11 @@ namespace NLua
 
         public LuaFunction(int reference, Lua interpreter) : base(reference, interpreter)
         {
-            function = null;
+            interpreter.State.RawGetInteger(LuaRegistry.Index, reference);
+            var fref = interpreter.State.GetTop();
+            var f = NativeMethods.lua_tocfunction(interpreter.State.GetInternalState, fref);
+            interpreter.State.Pop(1);
+            function = f;
         }
 
         public LuaFunction(LuaNativeFunction nativeFunction, Lua interpreter) : base(0, interpreter)
