@@ -20,7 +20,7 @@ public class Lua : IDisposable
 {
     private LuaState _luaState;
     private readonly Lua _mainState;
-    
+
     /// <summary>
     /// Internal Lua state.
     /// </summary>
@@ -1530,8 +1530,7 @@ public class Lua : IDisposable
         // TODO: Read what this returns
         if (NativeMethods.luaL_callmeta(_luaState, idx, "__tostring") != 0)
         {
-            int t = NativeMethods.lua_type(_luaState, idx), tt = 0;
-            string name = null;
+            int t = NativeMethods.lua_type(_luaState, idx);
             switch (t)
             {
                 case NativeMethods.LUA_TNIL:
@@ -1548,8 +1547,8 @@ public class Lua : IDisposable
                         NativeMethods.lua_pushliteral(_luaState, "false");
                     break;
                 default:
-                    tt = NativeMethods.luaL_getmetafield(_luaState, idx, "__name");
-                    name = (tt == NativeMethods.LUA_TSTRING) ? NativeMethods.lua_tostring(_luaState, -1) : NativeMethods.lua_typename(_luaState, t);
+                    int tt = NativeMethods.luaL_getmetafield(_luaState, idx, "__name");
+                    string name = (tt == NativeMethods.LUA_TSTRING) ? NativeMethods.lua_tostring(_luaState, -1) : NativeMethods.lua_typename(_luaState, t);
                     NativeMethods.lua_pushstring(_luaState, $"{name} {NativeMethods.lua_topointer(_luaState, idx):X}");
                     if (tt != NativeMethods.LUA_TNIL)
                         NativeMethods.lua_replace(_luaState, -2);
@@ -1558,7 +1557,7 @@ public class Lua : IDisposable
         }
         else
         {
-            if (NativeMethods.lua_isstring(_luaState, -1) != 0)
+            if (NativeMethods.lua_isstring(_luaState, -1) != 1)
                 _ = NativeMethods.luaL_error(_luaState, "'__tostring' must return a string");
         }
 
@@ -1970,10 +1969,8 @@ public class Lua : IDisposable
     /// <returns>It returns false if there are no errors or true in case of errors. </returns>
     public bool DoString(string file)
     {
-        bool doStringError = NativeMethods.luaL_dostring(_luaState, file) == 1;
-        bool pCallError = NativeMethods.lua_pcall(_luaState, 0, NativeMethods.LUA_MULTRET, 0) == 1;
-
-        return doStringError || pCallError;
+        bool hasError = LoadString(file) != LuaStatus.OK || PCall(0, NativeMethods.LUA_MULTRET, 0) != LuaStatus.OK;
+        return hasError;
     }
 
     /// <summary>
