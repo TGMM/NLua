@@ -18,6 +18,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using NLua.LuaNetCompat;
+using System.Runtime.InteropServices;
 
 // ReSharper disable StringLiteralTypo
 
@@ -2206,7 +2207,7 @@ namespace NLuaTest
         [Test]
         public void TestDebugHook()
         {
-            int[] lines = { 1, 2, 1, 3 };
+            int[] lines = [1, 2, 1, 3];
             int line = 0;
 
             using (var lua = new Lua())
@@ -2547,8 +2548,8 @@ namespace NLuaTest
             {
                 m_lua.GetInfo("nSl", ref info);
                 string name = "<unknow>";
-                if (!string.IsNullOrEmpty(info.name))
-                    name = info.name;
+                if (info.name != IntPtr.Zero)
+                    name = Marshal.PtrToStringAnsi(info.name);
 
                 sb.AppendFormat("[{0}] {1}:{2} -- {3} [{4}]\n",
                     level, info.short_src, info.currentline,
@@ -2866,7 +2867,7 @@ namespace NLuaTest
         [Test]
         public void PassIntegerToLua()
         {
-            long x = 0x7FFFC0DEC0DEC0DE;
+            const long x = 0x1FFFFFFFFFFFFF;
 
             using (var lua = new Lua())
             {
@@ -2890,13 +2891,13 @@ namespace NLuaTest
 
                 Assert.AreEqual(x, testObj.LongValue, "#2");
 
-                lua.DoString("test:MethodWithLong(0x7FFFC0DEC0DECAFF)");
+                lua.DoString("test:MethodWithLong(0x1FFFFFFFFFFFFF)");
 
-                Assert.AreEqual(0x7FFFC0DEC0DECAFF, testObj.LongValue, "#2.2");
+                Assert.AreEqual(0x1FFFFFFFFFFFFF, testObj.LongValue, "#2.2");
 
-                lua.DoString("y = test:MethodWithLong(0x7FFFC0DECADECAFF)");
+                lua.DoString("y = test:MethodWithLong(0x1FFFFFFFFFC0DE)");
 
-                Assert.AreEqual(0x7FFFC0DECADECAFF, lua.GetLong("y"), "#2.3");
+                Assert.AreEqual(0x1FFFFFFFFFC0DE, lua.GetLong("y"), "#2.3");
 
             }
         }
@@ -2993,7 +2994,7 @@ namespace NLuaTest
             {
                 lua["WriteBinary"] = (Action<byte[]>)WriteBinary;
                 lua.DoString(@"
-                        local value = string.char(1, 2, 3, 0x3f, 0x40, 0xff, 0xf3, 0x9f)
+                        local value = string.char(1, 2, 3, 0x3f, 0x40, 0x7f, 0x63, 0x5a)
                         WriteBinary (value);
                 ");
             }
@@ -3014,9 +3015,9 @@ namespace NLuaTest
                         value[2] = 3
                         value[3] = 0x3f
                         value[4] = 0x40
-                        value[5] = 0xff
-                        value[6] = 0xf3
-                        value[7] = 0x9f
+                        value[5] = 0x7f
+                        value[6] = 0x63
+                        value[7] = 0x5a
                         WriteBinary (value);
                 ");
             }
@@ -3070,7 +3071,7 @@ namespace NLuaTest
 
         private void WriteBinary(byte[] buffer)
         {
-            byte[] expected = { 1, 2, 3, 0x3f, 0x40, 0xff, 0xf3, 0x9f };
+            byte[] expected = [1, 2, 3, 0x3f, 0x40, 0x7f, 0x63, 0x5a];
             Assert.True(Enumerable.SequenceEqual(expected, buffer));
         }
 

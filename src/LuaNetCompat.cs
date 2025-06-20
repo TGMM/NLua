@@ -677,7 +677,7 @@ public class Lua : IDisposable
         if ((LuaType)NativeMethods.lua_type(_luaState, index) == LuaType.Number)
         {
             double n = NativeMethods.lua_tonumber(_luaState, index);
-            long i = NativeMethods.lua_tointeger(_luaState, index);
+            long i = ToInteger(index);
             if (i == n)
                 return true;
         }
@@ -913,11 +913,20 @@ public class Lua : IDisposable
     {
         NativeMethods.lua_rawgeti(_luaState, (int)LuaRegistry.Index, (int)LuaRegistryIndex.Globals);
     }
+
     /// <summary>
     /// Pushes an integer with value n onto the stack. 
     /// </summary>
     /// <param name="n"></param>
-    public void PushInteger(long n) => NativeMethods.lua_pushinteger(_luaState, n);
+    public void PushInteger(long n)
+    {
+        if (n > 0b11111111111111111111111111111111111111111111111111111)
+        {
+            NativeMethods.luaL_error(_luaState, "Due to Lua 5.1 limitations, can't store an integer larger than 53-bits");
+        }
+
+        NativeMethods.lua_pushinteger(_luaState, n);
+    }
 
     /// <summary>
     /// Pushes a light userdata onto the stack.
@@ -2451,23 +2460,23 @@ public enum LuaHookEvent
     /// <summary>
     /// The call hook: is called when the interpreter calls a function. The hook is called just after Lua enters the new function, before the function gets its arguments. 
     /// </summary>
-    Call = 0,
+    Call = NativeMethods.LUA_HOOKCALL,
     /// <summary>
     /// The return hook: is called when the interpreter returns from a function. The hook is called just before Lua leaves the function. There is no standard way to access the values to be returned by the function. 
     /// </summary>
-    Return = 1,
+    Return = NativeMethods.LUA_HOOKRET,
     /// <summary>
     /// The line hook: is called when the interpreter is about to start the execution of a new line of code, or when it jumps back in the code (even to the same line). (This event only happens while Lua is executing a Lua function.) 
     /// </summary>
-    Line = 2,
+    Line = NativeMethods.LUA_HOOKLINE,
     /// <summary>
     ///  The count hook: is called after the interpreter executes every count instructions. (This event only happens while Lua is executing a Lua function.) 
     /// </summary>
-    Count = 3,
+    Count = NativeMethods.LUA_HOOKCOUNT,
     /// <summary>
     /// Tail Call
     /// </summary>
-    TailCall = 4,
+    TailCall = NativeMethods.LUA_HOOKTAILRET,
 }
 
 [Flags]
@@ -2482,19 +2491,19 @@ public enum LuaHookMask
     /// <summary>
     /// The call hook: is called when the interpreter calls a function. The hook is called just after Lua enters the new function, before the function gets its arguments. 
     /// </summary>
-    Call = 1 << LuaHookEvent.Call,
+    Call = NativeMethods.LUA_MASKCALL,
     /// <summary>
     /// The return hook: is called when the interpreter returns from a function. The hook is called just before Lua leaves the function. There is no standard way to access the values to be returned by the function. 
     /// </summary>
-    Return = 1 << LuaHookEvent.Return,
+    Return = NativeMethods.LUA_MASKRET,
     /// <summary>
     /// The line hook: is called when the interpreter is about to start the execution of a new line of code, or when it jumps back in the code (even to the same line). (This event only happens while Lua is executing a Lua function.) 
     /// </summary>
-    Line = 1 << LuaHookEvent.Line,
+    Line = NativeMethods.LUA_MASKLINE,
     /// <summary>
     ///  The count hook: is called after the interpreter executes every count instructions. (This event only happens while Lua is executing a Lua function.) 
     /// </summary>
-    Count = 1 << LuaHookEvent.Count,
+    Count = NativeMethods.LUA_MASKCOUNT,
 }
 
 public enum LuaGC
