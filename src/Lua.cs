@@ -15,10 +15,10 @@ using NLua.Extensions;
 #endif
 
 using LuaState = NLua.LuaNetCompat.Lua;
-using LuaNativeFunction = LuaNET.Lua51.Lua.lua_CFunction;
-using LuaDebug = LuaNET.Lua51.Lua.lua_Debug;
-using LuaNativeState = LuaNET.Lua51.lua_State;
-using LuaHookFunction = LuaNET.Lua51.Lua.lua_Hook;
+using LuaNativeFunction = LuaNET.LuaJIT.Lua.lua_CFunction;
+using LuaDebug = LuaNET.LuaJIT.Lua.lua_Debug;
+using LuaNativeState = LuaNET.LuaJIT.lua_State;
+using LuaHookFunction = LuaNET.LuaJIT.Lua.lua_Hook;
 
 namespace NLua
 {

@@ -7,8 +7,8 @@ using NLua.Exceptions;
 using NLua.Extensions;
 
 using LuaState = NLua.LuaNetCompat.Lua;
-using LuaNativeFunction = LuaNET.Lua51.Lua.lua_CFunction;
-using LuaNativeState = LuaNET.Lua51.lua_State;
+using LuaNativeFunction = LuaNET.LuaJIT.Lua.lua_CFunction;
+using LuaNativeState = LuaNET.LuaJIT.lua_State;
 
 namespace NLua.Method
 {

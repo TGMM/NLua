@@ -2,14 +2,14 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
-using NativeMethods = LuaNET.Lua51.Lua;
-using LuaState = LuaNET.Lua51.lua_State;
-using LuaDebug = LuaNET.Lua51.Lua.lua_Debug;
-using LuaHookFunction = LuaNET.Lua51.Lua.lua_Hook;
-using LuaWriter = LuaNET.Lua51.Lua.lua_Writer;
-using LuaAlloc = LuaNET.Lua51.Lua.lua_Alloc;
-using LuaReader = LuaNET.Lua51.Lua.lua_Reader;
-using LuaNativeFunction = LuaNET.Lua51.Lua.lua_CFunction;
+using NativeMethods = LuaNET.LuaJIT.Lua;
+using LuaState = LuaNET.LuaJIT.lua_State;
+using LuaDebug = LuaNET.LuaJIT.Lua.lua_Debug;
+using LuaHookFunction = LuaNET.LuaJIT.Lua.lua_Hook;
+using LuaWriter = LuaNET.LuaJIT.Lua.lua_Writer;
+using LuaAlloc = LuaNET.LuaJIT.Lua.lua_Alloc;
+using LuaReader = LuaNET.LuaJIT.Lua.lua_Reader;
+using LuaNativeFunction = LuaNET.LuaJIT.Lua.lua_CFunction;
 
 namespace NLua.LuaNetCompat;
 

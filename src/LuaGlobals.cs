@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 
-using LuaNativeFunction = LuaNET.Lua51.Lua.lua_CFunction;
+using LuaNativeFunction = LuaNET.LuaJIT.Lua.lua_CFunction;
 
 namespace NLua
 {

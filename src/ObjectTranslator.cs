@@ -16,8 +16,8 @@ using NLua.Extensions;
 #endif
 
 using LuaState = NLua.LuaNetCompat.Lua;
-using LuaNativeState = LuaNET.Lua51.lua_State;
-using LuaNativeFunction = LuaNET.Lua51.Lua.lua_CFunction;
+using LuaNativeState = LuaNET.LuaJIT.lua_State;
+using LuaNativeFunction = LuaNET.LuaJIT.Lua.lua_CFunction;
 using System.Runtime.CompilerServices;
 
 namespace NLua

@@ -2,8 +2,8 @@
 using NLua.LuaNetCompat;
 
 using LuaState = NLua.LuaNetCompat.Lua;
-using LuaNativeFunction = LuaNET.Lua51.Lua.lua_CFunction;
-using NativeMethods = LuaNET.Lua51.Lua;
+using LuaNativeFunction = LuaNET.LuaJIT.Lua.lua_CFunction;
+using NativeMethods = LuaNET.LuaJIT.Lua;
 
 namespace NLua
 {

@@ -2540,7 +2540,7 @@ namespace NLuaTest
         {
 
             //string expected = "[0] func:-1 -- <unknown> [func]\n[1] f3:12 -- <unknown> [f3]\n[2] f2:8 -- <unknown> [f2]\n[3] f1:4 -- <unknown> [f1]\n[4] :15 --  []\n";
-            var info = new LuaNET.Lua51.Lua.lua_Debug();
+            var info = new LuaNET.LuaJIT.Lua.lua_Debug();
 
             int level = 0;
             var sb = new StringBuilder();

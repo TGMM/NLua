@@ -1,5 +1,5 @@
 using System;
-using LuaDebug = LuaNET.Lua51.Lua.lua_Debug;
+using LuaDebug = LuaNET.LuaJIT.Lua.lua_Debug;
 
 namespace NLua.Event
 {
